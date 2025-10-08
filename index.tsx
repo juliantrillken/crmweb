@@ -1,4 +1,3 @@
-
 import {render} from 'preact';
 import {useState, useEffect, useCallback} from 'preact/hooks';
 import {html} from 'htm/preact';
@@ -83,6 +82,18 @@ const formatDate = (dateString: string | null | undefined) => {
     }
 }
 
+const safeFormatDateForStorage = (dateInput: any): string => {
+    if (!dateInput) {
+        return new Date().toISOString().split('T')[0];
+    }
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) {
+        console.warn(`Invalid date value encountered during import: "${dateInput}". Falling back to today's date.`);
+        return new Date().toISOString().split('T')[0];
+    }
+    return date.toISOString().split('T')[0];
+};
+
 // --- UI COMPONENTS ---
 
 const Header = ({ settings, setView }: { settings: CompanySettings, setView: (view: View) => void }) => {
@@ -100,7 +111,90 @@ const Header = ({ settings, setView }: { settings: CompanySettings, setView: (vi
   `;
 };
 
-const Dashboard = ({ setView, setEditingCustomerId, customers }: { setView: (view: View) => void; setEditingCustomerId: (id: string | null) => void; customers: Customer[] }) => {
+const QuickNote = ({ customers, saveCustomer }: { customers: Customer[], saveCustomer: (customer: Customer) => void }) => {
+    const [noteContent, setNoteContent] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    const searchResults = searchTerm
+        ? customers.filter(c =>
+            !c.inactive && c.companyName.toLowerCase().includes(searchTerm.toLowerCase())
+          ).slice(0, 5)
+        : [];
+
+    const handleSelectCustomer = (customer: Customer) => {
+        setSelectedCustomer(customer);
+        setSearchTerm('');
+    };
+
+    const handleSaveNote = () => {
+        if (!selectedCustomer || !noteContent.trim()) return;
+
+        const updatedCustomer: Customer = {
+            ...selectedCustomer,
+            lastContact: new Date().toISOString().split('T')[0],
+            notes: [
+                ...(selectedCustomer.notes || []),
+                {
+                    id: crypto.randomUUID(),
+                    date: new Date().toISOString(),
+                    content: noteContent.trim(),
+                    isFuture: false
+                }
+            ]
+        };
+        saveCustomer(updatedCustomer);
+
+        setNoteContent('');
+        setSelectedCustomer(null);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2500);
+    };
+
+    return html`
+        <div class="card quick-note-card">
+            <h2>Schnellnotiz</h2>
+            <div class="form-group">
+                <label for="quickNoteContent">Notiz</label>
+                <textarea id="quickNoteContent" rows="3" value=${noteContent} onInput=${(e: Event) => setNoteContent((e.target as HTMLTextAreaElement).value)} placeholder="Was wurde besprochen? Welche Aktion wurde durchgeführt?"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="customerSearch">Kunde</label>
+                ${selectedCustomer ? html`
+                    <div class="selected-customer">
+                        <span>${selectedCustomer.companyName}</span>
+                        <button onClick=${() => setSelectedCustomer(null)} class="btn-clear-selection" title="Auswahl aufheben">×</button>
+                    </div>
+                ` : html`
+                    <div class="customer-search-container">
+                        <input
+                            type="text"
+                            id="customerSearch"
+                            placeholder="Kunden suchen..."
+                            value=${searchTerm}
+                            onInput=${(e: Event) => setSearchTerm((e.target as HTMLInputElement).value)}
+                        />
+                        ${searchResults.length > 0 && html`
+                            <ul class="search-results">
+                                ${searchResults.map(c => html`
+                                    <li key=${c.id} onClick=${() => handleSelectCustomer(c)}>${c.companyName}</li>
+                                `)}
+                            </ul>
+                        `}
+                    </div>
+                `}
+            </div>
+            <div class="form-actions" style=${{justifyContent: 'flex-end', marginTop: '1rem', borderTop: 'none', paddingTop: 0}}>
+                 ${showSuccess && html`<span class="success-message">Notiz gespeichert!</span>`}
+                 <button class="btn btn-primary" onClick=${handleSaveNote} disabled=${!selectedCustomer || !noteContent.trim()}>Speichern</button>
+            </div>
+        </div>
+    `;
+};
+
+
+const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer }: { setView: (view: View) => void; setEditingCustomerId: (id: string | null) => void; customers: Customer[]; saveCustomer: (customer: Customer) => void }) => {
     const upcomingDoings = customers
         .filter(c => c.reminderDate && !c.inactive)
         .sort((a, b) => new Date(a.reminderDate!).getTime() - new Date(b.reminderDate!).getTime())
@@ -144,6 +238,7 @@ const Dashboard = ({ setView, setEditingCustomerId, customers }: { setView: (vie
                 <p>Keine bevorstehenden Aufgaben. Gut gemacht!</p>
             `}
         </div>
+        <${QuickNote} customers=${customers} saveCustomer=${saveCustomer} />
     </div>
   `;
 };
@@ -295,11 +390,11 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
        <div class="filter-container">
         <div class="form-group search-group">
           <label for="searchTerm">Suche</label>
-          <input type="text" id="searchTerm" placeholder="Firma, Person, E-Mail..." value=${searchTerm} onInput=${e => setSearchTerm(e.target.value)} />
+          <input type="text" id="searchTerm" placeholder="Firma, Person, E-Mail..." value=${searchTerm} onInput=${(e: Event) => setSearchTerm((e.target as HTMLInputElement).value)} />
         </div>
         <div class="form-group">
           <label for="filterSource">Quelle</label>
-          <select id="filterSource" value=${filterSource} onChange=${e => setFilterSource(e.target.value)}>
+          <select id="filterSource" value=${filterSource} onChange=${(e: Event) => setFilterSource((e.target as HTMLSelectElement).value)}>
             <option value="">Alle</option>
             <option value="Google">Google</option>
             <option value="Empfehlung">Empfehlung</option>
@@ -309,18 +404,18 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
         </div>
         <div class="form-group">
           <label for="filterIndustry">Branche</label>
-          <input type="text" id="filterIndustry" placeholder="Branche suchen..." value=${filterIndustry} onInput=${e => setFilterIndustry(e.target.value)} />
+          <input type="text" id="filterIndustry" placeholder="Branche suchen..." value=${filterIndustry} onInput=${(e: Event) => setFilterIndustry((e.target as HTMLInputElement).value)} />
         </div>
         <div class="form-group">
             <label>Filter</label>
             <div class="checkbox-group">
-                <input type="checkbox" id="filterReminder" checked=${filterReminder} onChange=${e => setFilterReminder(e.target.checked)} />
+                <input type="checkbox" id="filterReminder" checked=${filterReminder} onChange=${(e: Event) => setFilterReminder((e.target as HTMLInputElement).checked)} />
                 <label for="filterReminder">Nur mit Reminder</label>
             </div>
         </div>
         <div class="form-group">
             <label for="sortBy">Sortieren nach</label>
-            <select id="sortBy" value=${sortBy} onChange=${e => setSortBy(e.target.value)}>
+            <select id="sortBy" value=${sortBy} onChange=${(e: Event) => setSortBy((e.target as HTMLSelectElement).value)}>
                 <option value="lastContact">Letzter Kontakt</option>
                 <option value="companyName">Firma</option>
                 <option value="firstContact">Erstkontakt</option>
@@ -358,17 +453,6 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
                     ${customer.contactPerson} 
                     ${customer.email && !showInactive && html`<a href="mailto:${customer.email}" class="email-icon" title=${`E-Mail an ${customer.contactPerson}`}>📧</a>`}
                     <br/><small>${customer.email}</small>
-                    ${customer.additionalContacts && customer.additionalContacts.length > 0 && html`
-                        <ul class="additional-contacts-list-view">
-                            ${customer.additionalContacts.map(contact => html`
-                                <li key=${contact.id}>
-                                    ${contact.name}
-                                    ${contact.email && !showInactive && html`<a href="mailto:${contact.email}" class="email-icon" title=${`E-Mail an ${contact.name}`}>📧</a>`}
-                                    <br/><small>${contact.email}</small>
-                                </li>
-                            `)}
-                        </ul>
-                    `}
                   </td>
                   <td>${formatDate(customer.lastContact)}</td>
                   <td>
@@ -632,10 +716,10 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
                     `}
                     <div class="add-contact-form">
                         <div class="form-group">
-                            <input type="text" placeholder="Name" value=${newContactName} onInput=${e => setNewContactName(e.target.value)} />
+                            <input type="text" placeholder="Name" value=${newContactName} onInput=${(e: Event) => setNewContactName((e.target as HTMLInputElement).value)} />
                         </div>
                         <div class="form-group">
-                            <input type="email" placeholder="E-Mail" value=${newContactEmail} onInput=${e => setNewContactEmail(e.target.value)} />
+                            <input type="email" placeholder="E-Mail" value=${newContactEmail} onInput=${(e: Event) => setNewContactEmail((e.target as HTMLInputElement).value)} />
                         </div>
                         <button type="button" class="btn btn-secondary" onClick=${handleAddContact}>Hinzufügen</button>
                     </div>
@@ -717,7 +801,7 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
                         <div class="history-item ${note.isFuture ? 'future-item' : ''}">
                             ${editingNoteId === note.id ? html`
                                 <div class="history-item-edit">
-                                    <input type="datetime-local" value=${editingDate} onInput=${e => { setEditingDate(e.target.value); setIsFormDirty(true); }} />
+                                    <input type="datetime-local" value=${editingDate} onInput=${(e: Event) => { setEditingDate((e.target as HTMLInputElement).value); setIsFormDirty(true); }} />
                                     <button class="btn btn-success btn-sm" onClick=${() => handleSaveNoteDate(note.id)}>Speichern</button>
                                     <button class="btn btn-secondary btn-sm" onClick=${() => setEditingNoteId(null)}>Abbrechen</button>
                                 </div>
@@ -738,7 +822,7 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
                             rows="4" 
                             placeholder="Was wurde besprochen? Welche Aktion wurde durchgeführt?"
                             value=${newNote}
-                            onInput=${e => { setNewNote(e.target.value); setIsFormDirty(true); }}
+                            onInput=${(e: Event) => { setNewNote((e.target as HTMLTextAreaElement).value); setIsFormDirty(true); }}
                         ></textarea>
                     </div>
                     <button class="btn btn-primary" onClick=${handleAddNote} disabled=${!newNote.trim()}>Eintrag speichern</button>
@@ -809,8 +893,8 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
                                 source: source || 'Sonstiges',
                                 industry: industry || '',
                                 nextSteps: nextSteps || '',
-                                firstContact: firstContact || new Date().toISOString().split('T')[0],
-                                lastContact: lastContact || new Date().toISOString().split('T')[0],
+                                firstContact: safeFormatDateForStorage(firstContact),
+                                lastContact: safeFormatDateForStorage(lastContact),
                                 sjSeen: sjSeen?.toLowerCase() === 'ja' || sjSeen?.toLowerCase() === 'yes',
                                 info: info || '',
                                 inactive: false,
@@ -839,8 +923,8 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
                                 source: String(row.source || row.Source || 'Sonstiges'),
                                 industry: String(row.industry || row.Industry || ''),
                                 nextSteps: String(row.nextSteps || row.NextSteps || ''),
-                                firstContact: row.firstContact || row.FirstContact ? new Date(row.firstContact || row.FirstContact).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                                lastContact: row.lastContact || row.LastContact ? new Date(row.lastContact || row.LastContact).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                                firstContact: safeFormatDateForStorage(row.firstContact || row.FirstContact),
+                                lastContact: safeFormatDateForStorage(row.lastContact || row.LastContact),
                                 sjSeen: String(row.sjSeen || row.SjSeen || '').toLowerCase() === 'ja' || String(row.sjSeen || row.SjSeen || '').toLowerCase() === 'yes',
                                 info: String(row.info || row.Info || ''),
                                 inactive: false,
@@ -959,6 +1043,59 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
         }
     };
 
+    const handleCsvExport = () => {
+        try {
+            const headers = [
+                'companyName', 'contactPerson', 'address', 'email', 'phone', 
+                'source', 'industry', 'nextSteps', 'firstContact', 'lastContact', 
+                'sjSeen', 'info'
+            ];
+
+            const escapeCsvField = (field) => {
+                const stringField = String(field ?? '');
+                if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+                    return `"${stringField.replace(/"/g, '""')}"`;
+                }
+                return stringField;
+            };
+
+            const csvRows = customers.map(customer => {
+                const row = [
+                    customer.companyName,
+                    customer.contactPerson,
+                    customer.address,
+                    customer.email,
+                    customer.phone,
+                    customer.source,
+                    customer.industry,
+                    customer.nextSteps,
+                    customer.firstContact,
+                    customer.lastContact,
+                    customer.sjSeen ? 'ja' : 'nein',
+                    customer.info,
+                ];
+                return row.map(escapeCsvField).join(',');
+            });
+
+            const csvString = [headers.join(','), ...csvRows].join('\n');
+            
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const date = new Date().toISOString().split('T')[0];
+            a.download = `crm_kunden_export_${date}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error("CSV Export Error:", error);
+            alert(`Ein Fehler ist beim Exportieren aufgetreten: ${error.message}`);
+        }
+    };
+
 
     return html`
       <div class="card">
@@ -995,7 +1132,10 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
                     <label for="fileImport">Datei zum Importieren auswählen</label>
                     <input type="file" id="fileImport" accept=".csv, .xls, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange=${handleCsvImport} />
                 </div>
-                 <button class="btn btn-secondary" onClick=${handleExcelExport}>Daten exportieren (.xlsx)</button>
+                 <div class="export-buttons-group">
+                    <button class="btn btn-secondary" onClick=${handleCsvExport}>Daten exportieren (.csv)</button>
+                    <button class="btn btn-secondary" onClick=${handleExcelExport}>Daten exportieren (.xlsx)</button>
+                </div>
             </div>
         </div>
         <div class="form-actions">
@@ -1044,7 +1184,7 @@ const App = () => {
   const renderView = () => {
     switch(currentView) {
       case 'dashboard':
-        return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} />`;
+        return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} saveCustomer=${saveCustomer} />`;
       case 'customerList':
         return html`<${CustomerList} customers=${customers} setView=${setView} setEditingCustomerId=${setEditingCustomerId} deleteCustomer=${deleteCustomer} />`;
       case 'customerForm':
@@ -1054,7 +1194,7 @@ const App = () => {
       case 'settings':
         return html`<${Settings} settings=${settings} setSettings=${setSettings} setView=${setView} customers=${customers} setCustomers=${setCustomers} />`;
       default:
-        return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} />`;
+        return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} saveCustomer=${saveCustomer} />`;
     }
   }
 

@@ -1,4 +1,3 @@
-
 :root {
   --primary-color: #007bff;
   --primary-hover: #0056b3;
@@ -385,6 +384,7 @@ input:read-only {
 .import-export-actions {
     display: flex;
     align-items: flex-end;
+    justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
     margin-top: 1.5rem;
@@ -392,6 +392,12 @@ input:read-only {
 
 .import-export-actions .form-group {
     margin-bottom: 0;
+}
+
+.export-buttons-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 
@@ -702,6 +708,75 @@ input:read-only {
     color: var(--danger-color);
 }
 
+/* Quick Note */
+.customer-search-container {
+    position: relative;
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    z-index: 100;
+    max-height: 160px;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.search-results li {
+    padding: 0.75rem;
+    cursor: pointer;
+}
+
+.search-results li:hover {
+    background-color: var(--secondary-color);
+}
+
+.selected-customer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--secondary-color);
+}
+
+.btn-clear-selection {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-light);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 0.5rem;
+}
+
+.btn-clear-selection:hover {
+    color: var(--danger-color);
+}
+
+.success-message {
+    color: var(--success-color);
+    margin-right: auto;
+    animation: fadeInOut 2.5s ease-in-out forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
 /* Additional Contacts */
 .text-light {
     color: var(--text-light);
@@ -748,20 +823,4 @@ input:read-only {
 }
 .add-contact-form button {
     flex-shrink: 0;
-}
-
-/* For Customer List View */
-.additional-contacts-list-view {
-    list-style: none;
-    padding: 0;
-    margin-top: 0.75rem;
-    border-top: 1px dashed var(--border-color);
-    padding-top: 0.75rem;
-}
-.additional-contacts-list-view li {
-    font-size: 0.9rem;
-    padding-bottom: 0.5rem;
-}
-.additional-contacts-list-view li:last-child {
-    padding-bottom: 0;
 }
