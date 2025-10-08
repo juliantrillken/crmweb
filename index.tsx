@@ -94,9 +94,55 @@ const safeFormatDateForStorage = (dateInput: any): string => {
     return date.toISOString().split('T')[0];
 };
 
+const safeFormatNullableDateForStorage = (dateInput: any): string | null => {
+    if (!dateInput || dateInput === 'null' || dateInput === 'undefined') {
+        return null;
+    }
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) {
+        console.warn(`Invalid nullable date value encountered during import: "${dateInput}". Setting to null.`);
+        return null;
+    }
+    return date.toISOString().split('T')[0];
+};
+
 // --- UI COMPONENTS ---
 
-const Header = ({ settings, setView }: { settings: CompanySettings, setView: (view: View) => void }) => {
+const LoginScreen = ({ setCurrentUser }: { setCurrentUser: (user: string) => void }) => {
+    const [identifier, setIdentifier] = useState('');
+
+    const handleSubmit = (e: Event) => {
+        e.preventDefault();
+        if (identifier.trim()) {
+            setCurrentUser(identifier.trim());
+        }
+    };
+
+    return html`
+        <div class="login-container">
+            <div class="card login-card">
+                <h1>Willkommen!</h1>
+                <p>Bitte geben Sie Ihre Kennung ein, um zu starten.</p>
+                <form onSubmit=${handleSubmit}>
+                    <div class="form-group">
+                        <label for="identifier">Ihre Kennung (Name oder Kürzel)</label>
+                        <input
+                            type="text"
+                            id="identifier"
+                            value=${identifier}
+                            onInput=${(e: Event) => setIdentifier((e.target as HTMLInputElement).value)}
+                            required
+                            autoFocus
+                        />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style=${{width: '100%'}}>Starten</button>
+                </form>
+            </div>
+        </div>
+    `;
+};
+
+const Header = ({ settings, setView, currentUser }: { settings: CompanySettings, setView: (view: View) => void, currentUser: string }) => {
   return html`
     <header>
       <div class="logo-container">
@@ -104,6 +150,9 @@ const Header = ({ settings, setView }: { settings: CompanySettings, setView: (vi
         <h1>${settings.companyName || 'CRM Pro'}</h1>
       </div>
       <nav>
+        <div class="user-display">
+            Angemeldet als: <strong>${currentUser}</strong>
+        </div>
         <button onClick=${() => setView('dashboard')}>Dashboard</button>
         <button onClick=${() => setView('settings')}>Einstellungen</button>
       </nav>
@@ -194,16 +243,18 @@ const QuickNote = ({ customers, saveCustomer }: { customers: Customer[], saveCus
 };
 
 
-const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer }: { setView: (view: View) => void; setEditingCustomerId: (id: string | null) => void; customers: Customer[]; saveCustomer: (customer: Customer) => void }) => {
+const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer, currentUser }: { setView: (view: View) => void; setEditingCustomerId: (id: string | null) => void; customers: Customer[]; saveCustomer: (customer: Customer) => void; settings: CompanySettings; currentUser: string; }) => {
     const upcomingDoings = customers
         .filter(c => c.reminderDate && !c.inactive)
         .sort((a, b) => new Date(a.reminderDate!).getTime() - new Date(b.reminderDate!).getTime())
         .slice(0, 5);
 
+    const welcomeMessage = `Willkommen zurück, ${currentUser}!`;
+
   return html`
     <div class="dashboard-grid">
         <div class="card">
-          <h2>Willkommen zurück!</h2>
+          <h2>${welcomeMessage}</h2>
           <p>Verwalten Sie Ihre Kundenbeziehungen effizient und einfach.</p>
           <div class="dashboard-actions" style=${{ marginTop: '1.5rem' }}>
             <button class="btn btn-primary" onClick=${() => { setEditingCustomerId(null); setView('customerForm'); }}>
@@ -538,9 +589,9 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
 
 
   const handleChange = (e: Event) => {
-    const target = e.target as HTMLInputElement;
+    const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
     const name = target.name;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const value = target.type === 'checkbox' ? (target as HTMLInputElement).checked : target.value;
     setFormData(prev => ({ ...prev, [name]: value }));
     setIsFormDirty(true);
   };
@@ -836,7 +887,7 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
   `;
 };
 
-const Settings = ({ settings, setSettings, setView, customers, setCustomers }: { settings: CompanySettings; setSettings: (value: CompanySettings | ((prev: CompanySettings) => CompanySettings)) => void; setView: (v: View) => void; customers: Customer[]; setCustomers: (value: Customer[] | ((prev: Customer[]) => Customer[])) => void; }) => {
+const Settings = ({ settings, setSettings, setView, customers, setCustomers, isDarkMode, setIsDarkMode, currentUser, setCurrentUser }: { settings: CompanySettings; setSettings: (value: CompanySettings | ((prev: CompanySettings) => CompanySettings)) => void; setView: (v: View) => void; customers: Customer[]; setCustomers: (value: Customer[] | ((prev: Customer[]) => Customer[])) => void; isDarkMode: boolean; setIsDarkMode: (value: boolean | ((prev: boolean) => boolean)) => void; currentUser: string; setCurrentUser: (user: string | null) => void; }) => {
     const [importSuccess, setImportSuccess] = useState(false);
     
     useEffect(() => {
@@ -849,7 +900,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
 
     const handleNameChange = (e: Event) => {
         const { value } = e.target as HTMLInputElement;
-        setSettings({ ...settings, companyName: value });
+        setSettings(prev => ({ ...prev, companyName: value }));
     };
 
     const handleLogoChange = (e: Event) => {
@@ -857,7 +908,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
         if (file) {
             const reader = new FileReader();
             reader.onload = (event) => {
-                setSettings({ ...settings, logo: event.target?.result as string });
+                setSettings(prev => ({ ...prev, logo: event.target?.result as string }));
             };
             reader.readAsDataURL(file);
         }
@@ -880,7 +931,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
                     lines.forEach(line => {
                         if (!line.trim()) return;
                         const fields = line.split(',').map(field => field.trim().replace(/"/g, ''));
-                        const [companyName, contactPerson, address, email, phone, source, industry, nextSteps, firstContact, lastContact, sjSeen, info] = fields;
+                        const [companyName, contactPerson, address, email, phone, source, industry, nextSteps, firstContact, lastContact, sjSeen, info, reminderDate, inactive] = fields;
                         
                         if (companyName) {
                             newCustomers.push({
@@ -897,8 +948,8 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
                                 lastContact: safeFormatDateForStorage(lastContact),
                                 sjSeen: sjSeen?.toLowerCase() === 'ja' || sjSeen?.toLowerCase() === 'yes',
                                 info: info || '',
-                                inactive: false,
-                                reminderDate: null,
+                                inactive: inactive?.toLowerCase() === 'ja' || inactive?.toLowerCase() === 'yes',
+                                reminderDate: safeFormatNullableDateForStorage(reminderDate),
                                 notes: [],
                                 additionalContacts: [],
                             });
@@ -927,8 +978,8 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
                                 lastContact: safeFormatDateForStorage(row.lastContact || row.LastContact),
                                 sjSeen: String(row.sjSeen || row.SjSeen || '').toLowerCase() === 'ja' || String(row.sjSeen || row.SjSeen || '').toLowerCase() === 'yes',
                                 info: String(row.info || row.Info || ''),
-                                inactive: false,
-                                reminderDate: null,
+                                inactive: String(row.inactive || row.Inactive || '').toLowerCase() === 'ja' || String(row.inactive || row.Inactive || '').toLowerCase() === 'yes',
+                                reminderDate: safeFormatNullableDateForStorage(row.reminderDate || row.ReminderDate),
                                 notes: [],
                                 additionalContacts: [],
                             });
@@ -1009,26 +1060,30 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
 
     const handleExcelExport = () => {
         try {
-            const dataForExport = customers.map(customer => ({
-                companyName: customer.companyName,
-                contactPerson: customer.contactPerson,
-                address: customer.address,
-                email: customer.email,
-                phone: customer.phone,
-                source: customer.source,
-                industry: customer.industry,
-                nextSteps: customer.nextSteps,
-                firstContact: customer.firstContact,
-                lastContact: customer.lastContact,
-                sjSeen: customer.sjSeen ? 'ja' : 'nein',
-                info: customer.info,
-            }));
+            const dataForExport = customers.map(customer => {
+                 return {
+                    companyName: customer.companyName,
+                    contactPerson: customer.contactPerson,
+                    address: customer.address,
+                    email: customer.email,
+                    phone: customer.phone,
+                    source: customer.source,
+                    industry: customer.industry,
+                    nextSteps: customer.nextSteps,
+                    firstContact: customer.firstContact,
+                    lastContact: customer.lastContact,
+                    sjSeen: customer.sjSeen ? 'ja' : 'nein',
+                    info: customer.info,
+                    reminderDate: customer.reminderDate || '',
+                    inactive: customer.inactive ? 'ja' : 'nein',
+                };
+            });
 
             const worksheet = XLSX.utils.json_to_sheet(dataForExport);
             worksheet['!cols'] = [
                 {wch: 25}, {wch: 20}, {wch: 30}, {wch: 25}, {wch: 15}, 
                 {wch: 15}, {wch: 20}, {wch: 30}, {wch: 12}, {wch: 12},
-                {wch: 8}, {wch: 40}
+                {wch: 8}, {wch: 40}, {wch: 12}, {wch: 8}
             ];
             
             const workbook = XLSX.utils.book_new();
@@ -1048,7 +1103,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
             const headers = [
                 'companyName', 'contactPerson', 'address', 'email', 'phone', 
                 'source', 'industry', 'nextSteps', 'firstContact', 'lastContact', 
-                'sjSeen', 'info'
+                'sjSeen', 'info', 'reminderDate', 'inactive'
             ];
 
             const escapeCsvField = (field) => {
@@ -1073,6 +1128,8 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
                     customer.lastContact,
                     customer.sjSeen ? 'ja' : 'nein',
                     customer.info,
+                    customer.reminderDate,
+                    customer.inactive ? 'ja' : 'nein',
                 ];
                 return row.map(escapeCsvField).join(',');
             });
@@ -1110,6 +1167,23 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
             ${settings.logo && html`<img src=${settings.logo} alt="Logo preview" style=${{ height: '50px', marginTop: '1rem' }} />`}
         </div>
 
+        <div class="personalization-section">
+             <h3>Personalisierung & Ansicht</h3>
+              <div class="form-group">
+                 <p>Angemeldet als: <strong>${currentUser}</strong></p>
+                 <button class="btn btn-secondary" onClick=${() => setCurrentUser(null)}>Benutzer wechseln</button>
+             </div>
+             <div class="form-group">
+                <div class="toggle-group">
+                    <label for="darkModeToggle">Dark Mode</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="darkModeToggle" checked=${isDarkMode} onChange=${() => setIsDarkMode(prev => !prev)} />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <div class="import-section">
             <h3>Daten sichern & wiederherstellen</h3>
             <p>Exportieren Sie alle Ihre CRM-Daten (Kunden & Einstellungen) in eine einzelne JSON-Datei als Backup. Diese Datei können Sie später wieder importieren.</p>
@@ -1125,8 +1199,8 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers }: {
         <div class="import-section">
             <h3>Kunden importieren & exportieren (Excel/CSV)</h3>
             <p>Importieren Sie eine CSV-, XLS- oder XLSX-Datei mit Ihren bestehenden Kundendaten. Die Spaltenüberschriften müssen sein:</p>
-            <p><code>companyName, contactPerson, address, email, phone, source, industry, nextSteps, firstContact, lastContact, sjSeen, info</code></p>
-            <p><small>Hinweis: 'sjSeen' sollte 'ja' oder 'nein' sein. Datumsfelder (firstContact, lastContact) sollten im Format YYYY-MM-DD sein oder als gültiges Excel-Datum.</small></p>
+            <p><code>companyName, contactPerson, address, email, phone, source, industry, nextSteps, firstContact, lastContact, sjSeen, info, reminderDate, inactive</code></p>
+            <p><small>Hinweis: 'sjSeen' und 'inactive' sollten 'ja' oder 'nein' sein. Datumsfelder (firstContact, lastContact, reminderDate) sollten im Format YYYY-MM-DD sein oder als gültiges Excel-Datum. Leere Datumsfelder sind erlaubt.</small></p>
             <div class="import-export-actions">
                 <div class="form-group">
                     <label for="fileImport">Datei zum Importieren auswählen</label>
@@ -1153,6 +1227,17 @@ const App = () => {
   const [settings, setSettings] = useLocalStorage<CompanySettings>('crm_settings', { companyName: 'Meine Firma', logo: null });
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useLocalStorage('crm_dark_mode', false);
+  const [currentUser, setCurrentUser] = useLocalStorage<string | null>('crm_current_user', null);
+
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [isDarkMode]);
 
   const setView = (view: View, options?: { force?: boolean }) => {
     if (!options?.force && currentView === 'customerForm' && isFormDirty) {
@@ -1184,7 +1269,7 @@ const App = () => {
   const renderView = () => {
     switch(currentView) {
       case 'dashboard':
-        return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} saveCustomer=${saveCustomer} />`;
+        return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} saveCustomer=${saveCustomer} settings=${settings} currentUser=${currentUser} />`;
       case 'customerList':
         return html`<${CustomerList} customers=${customers} setView=${setView} setEditingCustomerId=${setEditingCustomerId} deleteCustomer=${deleteCustomer} />`;
       case 'customerForm':
@@ -1192,14 +1277,18 @@ const App = () => {
        case 'doings':
         return html`<${Doings} customers=${customers} saveCustomer=${saveCustomer} setView=${setView} setEditingCustomerId=${setEditingCustomerId} />`;
       case 'settings':
-        return html`<${Settings} settings=${settings} setSettings=${setSettings} setView=${setView} customers=${customers} setCustomers=${setCustomers} />`;
+        return html`<${Settings} settings=${settings} setSettings=${setSettings} setView=${setView} customers=${customers} setCustomers=${setCustomers} isDarkMode=${isDarkMode} setIsDarkMode=${setIsDarkMode} currentUser=${currentUser} setCurrentUser=${setCurrentUser} />`;
       default:
-        return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} saveCustomer=${saveCustomer} />`;
+        return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} saveCustomer=${saveCustomer} settings=${settings} currentUser=${currentUser} />`;
     }
   }
 
+  if (!currentUser) {
+    return html`<${LoginScreen} setCurrentUser=${setCurrentUser} />`;
+  }
+
   return html`
-    <${Header} settings=${settings} setView=${setView} />
+    <${Header} settings=${settings} setView=${setView} currentUser=${currentUser} />
     <main>
       ${renderView()}
     </main>
