@@ -374,14 +374,29 @@ input:read-only {
   justify-content: center;
   align-items: center;
   z-index: 2000;
+  padding: 1rem;
 }
 
 .modal-content {
   background: var(--background-color);
   padding: 2rem;
   border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modal-fade-in 0.3s ease-out;
+}
+
+@keyframes modal-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .modal-header {
@@ -617,39 +632,28 @@ body.dark-mode .history-item.future-item {
 .history-item:last-child {
     border-bottom: none;
 }
-.history-item strong {
-    display: block;
+
+.history-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 0.5rem;
+}
+
+.history-item-header strong {
     color: var(--text-light);
     font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
-.history-item p {
+
+.history-item-view p {
     white-space: pre-wrap;
     word-break: break-word;
 }
-.btn-edit-date {
-    background: none;
-    border: none;
-    cursor: pointer;
+
+.history-item-edit .form-group label {
+    font-size: 0.9rem;
     color: var(--text-light);
-    padding: 0.2rem;
-    line-height: 1;
-    font-size: 1.2rem;
-    opacity: 0.5;
-    transition: opacity 0.2s;
-}
-.btn-edit-date:hover {
-    opacity: 1;
-    color: var(--primary-color);
-}
-.history-item-edit {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
 }
 
 .add-note-form {
@@ -976,4 +980,81 @@ input:checked + .slider:before {
 }
 .login-card .form-group {
     text-align: left;
+}
+
+/* ROI Calculator */
+.card-title-small {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.roi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.roi-section h4 {
+    margin-bottom: 1rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.form-group-inline {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-group-inline .form-group {
+    flex: 1;
+}
+
+.roi-results {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.roi-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 1rem;
+}
+
+.roi-result-item:last-child {
+    border-bottom: none;
+}
+
+.roi-result-item span {
+    color: var(--text-light);
+}
+
+.roi-result-item strong {
+    font-weight: 600;
+}
+
+.roi-result-item.highlight {
+    font-size: 1.1rem;
+}
+
+.roi-result-item .success-text {
+    color: var(--success-color);
+}
+
+.roi-assign-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.roi-assign-section h4 {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
 }

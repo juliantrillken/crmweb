@@ -1,5 +1,5 @@
 import {render} from 'preact';
-import {useState, useEffect, useCallback} from 'preact/hooks';
+import {useState, useEffect, useCallback, useMemo} from 'preact/hooks';
 import {html} from 'htm/preact';
 import * as XLSX from 'xlsx';
 
@@ -107,6 +107,32 @@ const safeFormatNullableDateForStorage = (dateInput: any): string | null => {
 };
 
 // --- UI COMPONENTS ---
+
+const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: any }) => {
+    if (!isOpen) return null;
+
+    useEffect(() => {
+        const handleEsc = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [onClose]);
+
+    return html`
+        <div class="modal-backdrop" onClick=${onClose}>
+            <div class="modal-content" onClick=${(e: Event) => e.stopPropagation()}>
+                <div class="modal-header">
+                    <h3>${title}</h3>
+                    <button onClick=${onClose} class="close-button">×</button>
+                </div>
+                ${children}
+            </div>
+        </div>
+    `;
+};
 
 const LoginScreen = ({ setCurrentUser }: { setCurrentUser: (user: string) => void }) => {
     const [identifier, setIdentifier] = useState('');
@@ -242,8 +268,186 @@ const QuickNote = ({ customers, saveCustomer }: { customers: Customer[], saveCus
     `;
 };
 
+const ROICalculator = ({ customers, saveCustomer, onClose }: { customers: Customer[], saveCustomer: (customer: Customer) => void, onClose: () => void }) => {
+    const [employees, setEmployees] = useState('');
+    const [salary, setSalary] = useState('');
+    const [investment, setInvestment] = useState('');
+    const [operatingCosts, setOperatingCosts] = useState('');
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    const { grossAnnualSavings, netAnnualSavings, investmentCost, roi, paybackPeriod } = useMemo(() => {
+        const numEmployees = parseFloat(employees) || 0;
+        const numSalary = parseFloat(salary) || 0;
+        const numInvestment = parseFloat(investment) || 0;
+        const numOperatingCosts = parseFloat(operatingCosts) || 0;
+
+        const grossAnnualSavings = numEmployees * numSalary;
+        const netAnnualSavings = grossAnnualSavings - numOperatingCosts;
+        const investmentCost = numInvestment;
+        
+        const roi = investmentCost > 0 ? (netAnnualSavings / investmentCost) * 100 : 0;
+        const paybackPeriod = netAnnualSavings > 0 ? investmentCost / netAnnualSavings : 0;
+
+        return { grossAnnualSavings, netAnnualSavings, investmentCost, roi, paybackPeriod };
+    }, [employees, salary, investment, operatingCosts]);
+
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value || 0);
+    }
+
+    const searchResults = searchTerm
+        ? customers.filter(c =>
+            !c.inactive && c.companyName.toLowerCase().includes(searchTerm.toLowerCase())
+          ).slice(0, 5)
+        : [];
+
+    const handleSelectCustomer = (customer: Customer) => {
+        setSelectedCustomer(customer);
+        setSearchTerm('');
+    };
+    
+    const handleAssignToCustomer = () => {
+        if (!selectedCustomer) return;
+
+        const noteContent = [
+            'ROI-Berechnung für automatisches Kleinteilelager:',
+            `- Gesamtinvestition: ${formatCurrency(investmentCost)}`,
+            `- Jährliche Einsparung (Brutto): ${formatCurrency(grossAnnualSavings)}`,
+            `- Jährliche Betriebskosten: ${formatCurrency(parseFloat(operatingCosts) || 0)}`,
+            `- Jährliche Einsparung (Netto): ${formatCurrency(netAnnualSavings)}`,
+            `- Amortisationszeit: ${paybackPeriod > 0 && isFinite(paybackPeriod) ? `${paybackPeriod.toFixed(1)} Jahre` : '-'}`,
+            `- Return on Investment (ROI): ${roi > 0 && isFinite(roi) ? `${roi.toFixed(1)} %` : '-'}`,
+            '---',
+            'Berechnungsparameter:',
+            `- Eingesparte Mitarbeiter: ${employees || 0}`,
+            `- Durchschnittl. Jahresgehalt: ${formatCurrency(parseFloat(salary) || 0)}`
+        ].join('\n');
+
+        const updatedCustomer: Customer = {
+            ...selectedCustomer,
+            lastContact: new Date().toISOString().split('T')[0],
+            notes: [
+                ...(selectedCustomer.notes || []),
+                {
+                    id: crypto.randomUUID(),
+                    date: new Date().toISOString(),
+                    content: noteContent,
+                    isFuture: false
+                }
+            ]
+        };
+        saveCustomer(updatedCustomer);
+
+        setSelectedCustomer(null);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2500);
+    };
+    
+    return html`
+        <div>
+            <div class="roi-grid">
+                <div class="roi-section">
+                    <h4>Einsparungen & Kosten</h4>
+                    <div class="form-group">
+                        <label for="roi-employees">Eingesparte Mitarbeiter</label>
+                        <input type="number" id="roi-employees" placeholder="z.B. 2" value=${employees} onInput=${(e) => setEmployees((e.target as HTMLInputElement).value)} />
+                    </div>
+                    <div class="form-group">
+                        <label for="roi-salary">Durchschn. Jahresgehalt (€)</label>
+                        <input type="number" id="roi-salary" placeholder="z.B. 55000" value=${salary} onInput=${(e) => setSalary((e.target as HTMLInputElement).value)} />
+                    </div>
+                     <div class="form-group">
+                        <label for="roi-operating-costs">Jährliche Betriebskosten (€)</label>
+                        <input type="number" id="roi-operating-costs" placeholder="z.B. 15000" value=${operatingCosts} onInput=${(e) => setOperatingCosts((e.target as HTMLInputElement).value)} />
+                    </div>
+                </div>
+                <div class="roi-section">
+                    <h4>Investition</h4>
+                     <div class="form-group">
+                        <label for="roi-investment">Gesamtinvestition (€)</label>
+                        <input type="number" id="roi-investment" placeholder="z.B. 800000" value=${investment} onInput=${(e) => setInvestment((e.target as HTMLInputElement).value)} />
+                    </div>
+                </div>
+            </div>
+
+            <div class="roi-results">
+                 <div class="roi-result-item">
+                    <span>Jährl. Einsparung (Netto)</span>
+                    <strong class="success-text">${formatCurrency(netAnnualSavings)}</strong>
+                </div>
+                 <div class="roi-result-item">
+                    <span>Gesamtinvestition</span>
+                    <strong>${formatCurrency(investmentCost)}</strong>
+                </div>
+                 <div class="roi-result-item highlight">
+                    <span>Amortisationszeit</span>
+                    <strong>${paybackPeriod > 0 && isFinite(paybackPeriod) ? `${paybackPeriod.toFixed(1)} Jahre` : '-'}</strong>
+                </div>
+                 <div class="roi-result-item highlight">
+                    <span>Return on Investment (ROI)</span>
+                    <strong class="success-text">${roi > 0 && isFinite(roi) ? `${roi.toFixed(1)} %` : '-'}</strong>
+                </div>
+            </div>
+
+             <div class="roi-assign-section">
+                <h4>Berechnung einem Kunden zuweisen</h4>
+                <div class="form-group">
+                    <label for="roiCustomerSearch">Kunde</label>
+                    ${selectedCustomer ? html`
+                        <div class="selected-customer">
+                            <span>${selectedCustomer.companyName}</span>
+                            <button onClick=${() => setSelectedCustomer(null)} class="btn-clear-selection" title="Auswahl aufheben">×</button>
+                        </div>
+                    ` : html`
+                        <div class="customer-search-container">
+                            <input
+                                type="text"
+                                id="roiCustomerSearch"
+                                placeholder="Kunden suchen..."
+                                value=${searchTerm}
+                                onInput=${(e: Event) => setSearchTerm((e.target as HTMLInputElement).value)}
+                            />
+                            ${searchResults.length > 0 && html`
+                                <ul class="search-results">
+                                    ${searchResults.map(c => html`
+                                        <li key=${c.id} onClick=${() => handleSelectCustomer(c)}>${c.companyName}</li>
+                                    `)}
+                                </ul>
+                            `}
+                        </div>
+                    `}
+                </div>
+                <div class="form-actions" style=${{justifyContent: 'flex-end', marginTop: '1rem', borderTop: 'none', paddingTop: 0}}>
+                    ${showSuccess && html`<span class="success-message">Berechnung gespeichert!</span>`}
+                    <button type="button" class="btn btn-secondary" onClick=${onClose}>Zurück</button>
+                    <button class="btn btn-primary" onClick=${handleAssignToCustomer} disabled=${!selectedCustomer}>Speichern</button>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+const ROICalculatorPreview = ({ onOpen }: { onOpen: () => void }) => {
+    return html`
+        <div class="card">
+            <h2>ROI Rechner</h2>
+            <p>Berechnen Sie die Rentabilität eines automatischen Kleinteilelagers basierend auf Einsparungen und Investitionskosten.</p>
+            <div class="dashboard-actions" style=${{ marginTop: '1.5rem', justifyContent: 'flex-start' }}>
+                <button class="btn btn-secondary" onClick=${onOpen}>
+                    Rechner öffnen
+                </button>
+            </div>
+        </div>
+    `;
+};
+
 
 const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer, currentUser }: { setView: (view: View) => void; setEditingCustomerId: (id: string | null) => void; customers: Customer[]; saveCustomer: (customer: Customer) => void; settings: CompanySettings; currentUser: string; }) => {
+    const [isRoiModalOpen, setIsRoiModalOpen] = useState(false);
+    
     const upcomingDoings = customers
         .filter(c => c.reminderDate && !c.inactive)
         .sort((a, b) => new Date(a.reminderDate!).getTime() - new Date(b.reminderDate!).getTime())
@@ -252,44 +456,52 @@ const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer, cur
     const welcomeMessage = `Willkommen zurück, ${currentUser}!`;
 
   return html`
-    <div class="dashboard-grid">
-        <div class="card">
-          <h2>${welcomeMessage}</h2>
-          <p>Verwalten Sie Ihre Kundenbeziehungen effizient und einfach.</p>
-          <div class="dashboard-actions" style=${{ marginTop: '1.5rem' }}>
-            <button class="btn btn-primary" onClick=${() => { setEditingCustomerId(null); setView('customerForm'); }}>
-              Neuen Kunden anlegen
-            </button>
-            <button class="btn btn-secondary" onClick=${() => setView('customerList')}>
-              Kundenliste anzeigen
-            </button>
-             <button class="btn btn-secondary" onClick=${() => setView('doings')}>
-              Offene Doings
-            </button>
-          </div>
+    <div>
+        <div class="dashboard-grid">
+            <div class="card">
+              <h2>${welcomeMessage}</h2>
+              <p>Verwalten Sie Ihre Kundenbeziehungen effizient und einfach.</p>
+              <div class="dashboard-actions" style=${{ marginTop: '1.5rem' }}>
+                <button class="btn btn-primary" onClick=${() => { setEditingCustomerId(null); setView('customerForm'); }}>
+                  Neuen Kunden anlegen
+                </button>
+                <button class="btn btn-secondary" onClick=${() => setView('customerList')}>
+                  Kundenliste anzeigen
+                </button>
+                 <button class="btn btn-secondary" onClick=${() => setView('doings')}>
+                  Offene Doings
+                </button>
+              </div>
+            </div>
+            <div class="card">
+                <h2>Nächste 5 offene Doings</h2>
+                ${upcomingDoings.length > 0 ? html`
+                    <ul class="upcoming-doings-list">
+                        ${upcomingDoings.map(customer => {
+                            const isOverdue = new Date(customer.reminderDate!) < new Date();
+                            return html`
+                                <li class="upcoming-doings-item" onClick=${() => { setEditingCustomerId(customer.id); setView('customerForm'); }}>
+                                    <div class="upcoming-doings-item-info">
+                                        <strong>${customer.companyName}</strong>
+                                        <small>${customer.nextSteps}</small>
+                                    </div>
+                                    <span class="upcoming-doings-item-date ${isOverdue ? 'overdue' : ''}">${formatDate(customer.reminderDate)}</span>
+                                </li>
+                            `;
+                        })}
+                    </ul>
+                ` : html`
+                    <p>Keine bevorstehenden Aufgaben. Gut gemacht!</p>
+                `}
+            </div>
+            <${QuickNote} customers=${customers} saveCustomer=${saveCustomer} />
         </div>
-        <div class="card">
-            <h2>Nächste 5 offene Doings</h2>
-            ${upcomingDoings.length > 0 ? html`
-                <ul class="upcoming-doings-list">
-                    ${upcomingDoings.map(customer => {
-                        const isOverdue = new Date(customer.reminderDate!) < new Date();
-                        return html`
-                            <li class="upcoming-doings-item" onClick=${() => { setEditingCustomerId(customer.id); setView('customerForm'); }}>
-                                <div class="upcoming-doings-item-info">
-                                    <strong>${customer.companyName}</strong>
-                                    <small>${customer.nextSteps}</small>
-                                </div>
-                                <span class="upcoming-doings-item-date ${isOverdue ? 'overdue' : ''}">${formatDate(customer.reminderDate)}</span>
-                            </li>
-                        `;
-                    })}
-                </ul>
-            ` : html`
-                <p>Keine bevorstehenden Aufgaben. Gut gemacht!</p>
-            `}
+        <div style=${{marginTop: '2rem'}}>
+             <${ROICalculatorPreview} onOpen=${() => setIsRoiModalOpen(true)} />
         </div>
-        <${QuickNote} customers=${customers} saveCustomer=${saveCustomer} />
+        <${Modal} isOpen=${isRoiModalOpen} onClose=${() => setIsRoiModalOpen(false)} title="ROI Rechner: Automatisches Kleinteilelager">
+            <${ROICalculator} customers=${customers} saveCustomer=${saveCustomer} onClose=${() => setIsRoiModalOpen(false)} />
+        </${Modal}>
     </div>
   `;
 };
@@ -408,7 +620,7 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
                 return new Date(b.firstContact).getTime() - new Date(a.firstContact).getTime();
             case 'lastContact':
             default:
-                return new Date(b.lastContact).getTime() - new Date(a.lastContact).getTime();
+                return new Date(b.lastContact).getTime() - new Date(a.firstContact).getTime();
         }
     });
 
@@ -497,7 +709,7 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
                   <td>
                     <a href="#" class="customer-name-link" onClick=${(e: MouseEvent) => { e.preventDefault(); setEditingCustomerId(customer.id); setView('customerForm'); }}>
                         ${customer.companyName}
-                    </a><br/>
+                    </a><br />
                     <small>${customer.industry}</small>
                   </td>
                   <td>
@@ -543,6 +755,7 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
   const [newNote, setNewNote] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingDate, setEditingDate] = useState('');
+  const [editingNoteContent, setEditingNoteContent] = useState('');
   const [newContactName, setNewContactName] = useState('');
   const [newContactEmail, setNewContactEmail] = useState('');
 
@@ -646,30 +859,35 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
     setIsFormDirty(false);
   };
 
-  const handleEditNoteDate = (note: Note) => {
+  const handleStartEditNote = (note: Note) => {
     setEditingNoteId(note.id);
     const localDate = new Date(note.date);
     localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
     setEditingDate(localDate.toISOString().slice(0, 16));
+    setEditingNoteContent(note.content);
+    setIsFormDirty(true);
   };
 
-  const handleSaveNoteDate = (noteId: string) => {
+  const handleSaveNote = (noteId: string) => {
     if (!customer || !editingDate) return;
     const updatedNotes = customer.notes.map(note => 
-      note.id === noteId ? { ...note, date: new Date(editingDate).toISOString() } : note
+      note.id === noteId ? { ...note, date: new Date(editingDate).toISOString(), content: editingNoteContent } : note
     );
     
     let newLastContact = customer.lastContact;
     if (updatedNotes.length > 0) {
-        // Sort notes by date descending to find the latest one
-        const sortedNotes = [...updatedNotes].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        newLastContact = sortedNotes[0].date.split('T')[0];
+        // Sort notes by date descending to find the latest one, ignoring future tasks
+        const sortedNotes = [...updatedNotes].filter(n => !n.isFuture).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        if (sortedNotes.length > 0) {
+            newLastContact = sortedNotes[0].date.split('T')[0];
+        }
     }
     
     const updatedCustomer = { ...customer, notes: updatedNotes, lastContact: newLastContact };
     saveCustomer(updatedCustomer);
     setEditingNoteId(null);
     setEditingDate('');
+    setEditingNoteContent('');
     setIsFormDirty(false);
   };
 
@@ -850,19 +1068,34 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
                 <div class="history-list">
                     ${getCombinedHistory().length > 0 ? getCombinedHistory().map(note => html`
                         <div class="history-item ${note.isFuture ? 'future-item' : ''}">
-                            ${editingNoteId === note.id ? html`
+                           ${editingNoteId === note.id ? html`
                                 <div class="history-item-edit">
-                                    <input type="datetime-local" value=${editingDate} onInput=${(e: Event) => { setEditingDate((e.target as HTMLInputElement).value); setIsFormDirty(true); }} />
-                                    <button class="btn btn-success btn-sm" onClick=${() => handleSaveNoteDate(note.id)}>Speichern</button>
-                                    <button class="btn btn-secondary btn-sm" onClick=${() => setEditingNoteId(null)}>Abbrechen</button>
+                                    <div class="form-group" style=${{marginBottom: '0.5rem'}}>
+                                        <label>Datum und Uhrzeit</label>
+                                        <input type="datetime-local" value=${editingDate} onInput=${(e: Event) => { setEditingDate((e.target as HTMLInputElement).value); setIsFormDirty(true); }} />
+                                    </div>
+                                    <div class="form-group" style=${{marginBottom: '0.5rem'}}>
+                                        <label>Inhalt</label>
+                                        <textarea rows="4" value=${editingNoteContent} onInput=${(e: Event) => { setEditingNoteContent((e.target as HTMLTextAreaElement).value); setIsFormDirty(true); }}></textarea>
+                                    </div>
+                                    <div class="form-actions" style=${{marginTop: '0.5rem', borderTop: 'none', paddingTop: 0}}>
+                                        <button class="btn btn-success btn-sm" onClick=${() => handleSaveNote(note.id)}>Speichern</button>
+                                        <button class="btn btn-secondary btn-sm" onClick=${() => setEditingNoteId(null)}>Abbrechen</button>
+                                    </div>
                                 </div>
                             ` : html`
-                                <strong>
-                                    ${new Date(note.date).toLocaleString()}
-                                    ${!note.isFuture && html`<button class="btn-edit-date" onClick=${() => handleEditNoteDate(note)}>📅</button>`}
-                                </strong>
+                                <div class="history-item-view">
+                                    <div class="history-item-header">
+                                        <strong>${new Date(note.date).toLocaleString()}</strong>
+                                        ${!note.isFuture ? html`
+                                             <button class="btn btn-secondary btn-sm" onClick=${() => handleStartEditNote(note)}>Bearbeiten</button>
+                                        ` : html`
+                                             <button class="btn btn-secondary btn-sm" onClick=${() => setActiveTab('info')}>Aufgabe bearbeiten</button>
+                                        `}
+                                    </div>
+                                    <p>${note.content}</p>
+                                </div>
                             `}
-                            <p>${note.content}</p>
                         </div>
                     `) : html`<p>Keine Einträge in der Historie vorhanden.</p>`}
                 </div>
