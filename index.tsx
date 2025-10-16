@@ -620,7 +620,7 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
                 return new Date(b.firstContact).getTime() - new Date(a.firstContact).getTime();
             case 'lastContact':
             default:
-                return new Date(b.lastContact).getTime() - new Date(a.firstContact).getTime();
+                return new Date(b.lastContact).getTime() - new Date(a.lastContact).getTime();
         }
     });
 
