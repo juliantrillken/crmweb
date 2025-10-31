@@ -344,6 +344,24 @@ body.dark-mode .reminder.overdue {
   transition: border-color 0.2s, background-color 0.2s;
 }
 
+.display-value {
+  padding: 0.75rem;
+  border: 1px solid transparent;
+  background-color: var(--secondary-color);
+  border-radius: 6px;
+  width: 100%;
+  min-height: calc(1.5rem + 2 * 0.75rem);
+  display: flex;
+  align-items: center;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-color);
+}
+
+.display-value.empty {
+    color: var(--text-light);
+}
+
 input:read-only {
   background-color: var(--secondary-color);
   cursor: default;
@@ -433,18 +451,17 @@ input:read-only {
     margin-bottom: 1.5rem;
 }
 
-.personalization-section,
-.appearance-section,
+.settings-section,
 .import-section {
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--border-color);
 }
-.personalization-section h3,
-.appearance-section h3,
+.settings-section h3,
 .import-section h3 {
     margin-bottom: 1rem;
 }
+
 .import-section p {
     color: var(--text-light);
     margin-bottom: 1rem;
@@ -1057,4 +1074,40 @@ input:checked + .slider:before {
     font-size: 1rem;
     font-weight: 600;
     color: var(--text-light);
+}
+
+/* Source Management */
+.source-list {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 400px;
+}
+
+.source-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 6px;
+    background-color: var(--secondary-color);
+}
+
+.add-source-form {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: 400px;
+}
+
+.add-source-form .form-group {
+    flex: 1;
+    min-width: 150px;
+    margin-bottom: 0;
+}
+
+.add-source-form button {
+    flex-shrink: 0;
 }

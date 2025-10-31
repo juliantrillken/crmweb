@@ -40,6 +40,7 @@ interface Customer {
 interface CompanySettings {
   companyName: string;
   logo: string | null;
+  customerSources: string[];
 }
 
 type View = 'dashboard' | 'customerList' | 'customerForm' | 'settings' | 'doings';
@@ -579,7 +580,7 @@ const Doings = ({ customers, saveCustomer, setView, setEditingCustomerId }: { cu
     `;
 };
 
-const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer }: { customers: Customer[], setView: (view: View) => void; setEditingCustomerId: (id: string | null) => void; deleteCustomer: (id: string) => void; }) => {
+const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer, settings }: { customers: Customer[], setView: (view: View) => void; setEditingCustomerId: (id: string | null) => void; deleteCustomer: (id: string) => void; settings: CompanySettings; }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterSource, setFilterSource] = useState('');
     const [filterIndustry, setFilterIndustry] = useState('');
@@ -659,10 +660,7 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
           <label for="filterSource">Quelle</label>
           <select id="filterSource" value=${filterSource} onChange=${(e: Event) => setFilterSource((e.target as HTMLSelectElement).value)}>
             <option value="">Alle</option>
-            <option value="Google">Google</option>
-            <option value="Empfehlung">Empfehlung</option>
-            <option value="Messe">Messe</option>
-            <option value="Sonstiges">Sonstiges</option>
+            ${(settings.customerSources || []).map(source => html`<option value=${source}>${source}</option>`)}
           </select>
         </div>
         <div class="form-group">
@@ -748,9 +746,10 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
 };
 
 
-const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, deleteCustomer, setIsFormDirty }: { saveCustomer: (customer: Customer) => void, setView: (view: View, options?: { force?: boolean }) => void; editingCustomerId: string | null, customers: Customer[], deleteCustomer: (id: string) => void, setIsFormDirty: (dirty: boolean) => void }) => {
+const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCustomerId, customers, deleteCustomer, isFormDirty, setIsFormDirty, settings }: { saveCustomer: (customer: Customer) => void, setView: (view: View, options?: { force?: boolean }) => void; editingCustomerId: string | null, setEditingCustomerId: (id: string | null) => void, customers: Customer[], deleteCustomer: (id: string) => void, isFormDirty: boolean, setIsFormDirty: (dirty: boolean) => void, settings: CompanySettings }) => {
   const customer = customers.find(c => c.id === editingCustomerId);
   
+  const [isEditing, setIsEditing] = useState(editingCustomerId === null);
   const [activeTab, setActiveTab] = useState('info');
   const [newNote, setNewNote] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -759,34 +758,15 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
   const [newContactName, setNewContactName] = useState('');
   const [newContactEmail, setNewContactEmail] = useState('');
 
-
-  const [formData, setFormData] = useState<Omit<Customer, 'id' | 'notes'>>({
-    companyName: customer?.companyName || '',
-    contactPerson: customer?.contactPerson || '',
-    address: customer?.address || '',
-    email: customer?.email || '',
-    phone: customer?.phone || '',
-    source: customer?.source || 'Google',
-    lastContact: customer?.lastContact || new Date().toISOString().split('T')[0],
-    firstContact: customer?.firstContact || new Date().toISOString().split('T')[0],
-    industry: customer?.industry || '',
-    nextSteps: customer?.nextSteps || '',
-    reminderDate: customer?.reminderDate || null,
-    sjSeen: customer?.sjSeen || false,
-    info: customer?.info || '',
-    inactive: customer?.inactive || false,
-    additionalContacts: customer?.additionalContacts || [],
-  });
-
-  useEffect(() => {
-    // When the customer prop changes, update the form data and reset dirty state
-    setFormData({
+  const getInitialFormData = useCallback(() => {
+    const availableSources = settings.customerSources || [];
+    return {
       companyName: customer?.companyName || '',
       contactPerson: customer?.contactPerson || '',
       address: customer?.address || '',
       email: customer?.email || '',
       phone: customer?.phone || '',
-      source: customer?.source || 'Google',
+      source: customer?.source || (availableSources.length > 0 ? availableSources[0] : ''),
       lastContact: customer?.lastContact || new Date().toISOString().split('T')[0],
       firstContact: customer?.firstContact || new Date().toISOString().split('T')[0],
       industry: customer?.industry || '',
@@ -796,10 +776,16 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
       info: customer?.info || '',
       inactive: customer?.inactive || false,
       additionalContacts: customer?.additionalContacts || [],
-    });
-    setIsFormDirty(false);
-  }, [customer]);
+    };
+  }, [customer, settings.customerSources]);
 
+  const [formData, setFormData] = useState(getInitialFormData());
+
+  useEffect(() => {
+    setIsEditing(editingCustomerId === null);
+    setFormData(getInitialFormData());
+    setIsFormDirty(false);
+  }, [editingCustomerId, getInitialFormData]);
 
   const handleChange = (e: Event) => {
     const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
@@ -829,8 +815,15 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
     }
     const id = editingCustomerId || crypto.randomUUID();
     const existingNotes = customers.find(c => c.id === id)?.notes || [];
-    saveCustomer({ id, ...formData, notes: existingNotes });
-    setView('customerList', { force: true });
+    const customerData = { id, ...formData, notes: existingNotes };
+    saveCustomer(customerData);
+
+    if (!editingCustomerId) {
+        setEditingCustomerId(id);
+    }
+
+    setIsEditing(false);
+    setIsFormDirty(false);
   };
   
   const handleDelete = () => {
@@ -838,6 +831,16 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
         deleteCustomer(editingCustomerId);
         setView('customerList', { force: true });
     }
+  };
+
+  const handleCancelEdit = () => {
+      if (editingCustomerId) {
+          setFormData(getInitialFormData());
+          setIsEditing(false);
+          setIsFormDirty(false);
+      } else {
+          setView('customerList', { force: true });
+      }
   };
   
   const handleAddNote = () => {
@@ -934,6 +937,12 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
       return historyItems.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
+  const DisplayField = ({ value, emptyText = '-' }: { value: string | null | undefined, emptyText?: string }) => {
+      return html`<div class="display-value ${!value ? 'empty' : ''}">${value || emptyText}</div>`;
+  };
+
+  const showSaveActions = isEditing || isFormDirty;
+
   return html`
     <div class="card">
         <h2>${editingCustomerId ? `Kunde: ${customer?.companyName}` : 'Neuen Kunden anlegen'}</h2>
@@ -941,28 +950,29 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
         ${editingCustomerId && html`
             <div class="tabs">
                 <button class="tab-link ${activeTab === 'info' ? 'active' : ''}" onClick=${() => setActiveTab('info')}>Kundeninformationen</button>
+                <button class="tab-link ${activeTab === 'doings' ? 'active' : ''}" onClick=${() => setActiveTab('doings')}>Doings</button>
                 <button class="tab-link ${activeTab === 'history' ? 'active' : ''}" onClick=${() => setActiveTab('history')}>Historie</button>
             </div>
         `}
 
-        <div style=${{display: !editingCustomerId || activeTab === 'info' ? 'block' : 'none'}}>
-            <form onSubmit=${handleSubmit} class="tab-content">
+        <div style=${{ display: activeTab === 'history' && editingCustomerId ? 'none' : 'block' }}>
+            <div style=${{display: !editingCustomerId || activeTab === 'info' ? 'block' : 'none'}} class="tab-content">
                 <div style=${{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
                     <div class="form-group">
                         <label for="companyName">Firmenname *</label>
-                        <input type="text" id="companyName" name="companyName" value=${formData.companyName} onInput=${handleChange} required />
+                        ${isEditing ? html`<input type="text" id="companyName" name="companyName" value=${formData.companyName} onInput=${handleChange} required />` : html`<${DisplayField} value=${formData.companyName} />`}
                     </div>
                     <div class="form-group">
                         <label for="contactPerson">Ansprechpartner</label>
-                        <input type="text" id="contactPerson" name="contactPerson" value=${formData.contactPerson} onInput=${handleChange} />
+                         ${isEditing ? html`<input type="text" id="contactPerson" name="contactPerson" value=${formData.contactPerson} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.contactPerson} />`}
                     </div>
                      <div class="form-group">
                         <label for="email">E-Mail</label>
-                        <input type="email" id="email" name="email" value=${formData.email} onInput=${handleChange} />
+                         ${isEditing ? html`<input type="email" id="email" name="email" value=${formData.email} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.email} />`}
                     </div>
                     <div class="form-group">
                         <label for="phone">Telefonnummer</label>
-                        <input type="tel" id="phone" name="phone" value=${formData.phone} onInput=${handleChange} />
+                         ${isEditing ? html`<input type="tel" id="phone" name="phone" value=${formData.phone} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.phone} />`}
                     </div>
                 </div>
 
@@ -976,72 +986,76 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
                                         <strong>${contact.name}</strong><br/>
                                         <small>${contact.email}</small>
                                     </div>
-                                    <button type="button" class="btn btn-danger btn-sm" onClick=${() => handleDeleteContact(contact.id)}>Löschen</button>
+                                    ${isEditing && html`<button type="button" class="btn btn-danger btn-sm" onClick=${() => handleDeleteContact(contact.id)}>Löschen</button>`}
                                 </div>
                             `)}
                         </div>
                     ` : html`
                         <p class="text-light">Keine weiteren Ansprechpartner hinzugefügt.</p>
                     `}
-                    <div class="add-contact-form">
-                        <div class="form-group">
-                            <input type="text" placeholder="Name" value=${newContactName} onInput=${(e: Event) => setNewContactName((e.target as HTMLInputElement).value)} />
+                    ${isEditing && html`
+                        <div class="add-contact-form">
+                            <div class="form-group">
+                                <input type="text" placeholder="Name" value=${newContactName} onInput=${(e: Event) => setNewContactName((e.target as HTMLInputElement).value)} />
+                            </div>
+                            <div class="form-group">
+                                <input type="email" placeholder="E-Mail" value=${newContactEmail} onInput=${(e: Event) => setNewContactEmail((e.target as HTMLInputElement).value)} />
+                            </div>
+                            <button type="button" class="btn btn-secondary" onClick=${handleAddContact}>Hinzufügen</button>
                         </div>
-                        <div class="form-group">
-                            <input type="email" placeholder="E-Mail" value=${newContactEmail} onInput=${(e: Event) => setNewContactEmail((e.target as HTMLInputElement).value)} />
-                        </div>
-                        <button type="button" class="btn btn-secondary" onClick=${handleAddContact}>Hinzufügen</button>
-                    </div>
+                    `}
                 </div>
 
                  <div class="form-group">
                     <label for="address">Adresse</label>
-                    <textarea id="address" name="address" onInput=${handleChange}>${formData.address}</textarea>
+                     ${isEditing ? html`<textarea id="address" name="address" onInput=${handleChange}>${formData.address}</textarea>` : html`<${DisplayField} value=${formData.address} />`}
                 </div>
                 <div style=${{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem'}}>
                     <div class="form-group">
                         <label for="source">Woher kommt der Kunde?</label>
-                        <select id="source" name="source" value=${formData.source} onChange=${handleChange}>
-                            <option value="Google">Google</option>
-                            <option value="Empfehlung">Empfehlung</option>
-                            <option value="Messe">Messe</option>
-                            <option value="Sonstiges">Sonstiges</option>
-                        </select>
+                        ${isEditing ? html`
+                            <select id="source" name="source" value=${formData.source} onChange=${handleChange}>
+                                ${(settings.customerSources || []).map(source => html`<option value=${source}>${source}</option>`)}
+                            </select>
+                        ` : html`<${DisplayField} value=${formData.source} />`}
                     </div>
                     <div class="form-group">
                         <label for="firstContact">Erstkontakt</label>
-                        <input type="date" id="firstContact" name="firstContact" value=${formData.firstContact} onInput=${handleChange} />
+                         ${isEditing ? html`<input type="date" id="firstContact" name="firstContact" value=${formData.firstContact} onInput=${handleChange} />` : html`<${DisplayField} value=${formatDate(formData.firstContact)} />`}
                     </div>
                     <div class="form-group">
                         <label for="lastContact">Letzter Kontakt</label>
-                        <input type="date" id="lastContact" name="lastContact" value=${formData.lastContact} onInput=${handleChange} />
+                         ${isEditing ? html`<input type="date" id="lastContact" name="lastContact" value=${formData.lastContact} onInput=${handleChange} />` : html`<${DisplayField} value=${formatDate(formData.lastContact)} />`}
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="industry">Branche des Kunden</label>
-                    <input type="text" id="industry" name="industry" value=${formData.industry} onInput=${handleChange} />
+                     ${isEditing ? html`<input type="text" id="industry" name="industry" value=${formData.industry} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.industry} />`}
                 </div>
                  <div class="form-group">
                     <label for="info">Infos</label>
-                    <textarea id="info" name="info" onInput=${handleChange}>${formData.info}</textarea>
+                     ${isEditing ? html`<textarea id="info" name="info" onInput=${handleChange}>${formData.info}</textarea>` : html`<${DisplayField} value=${formData.info} />`}
                 </div>
+                 <div class="form-group">
+                    <div class="checkbox-group" style=${{ height: 'auto', gap: '2rem' }}>
+                        <div class="checkbox-item">
+                            ${isEditing ? html`<input type="checkbox" id="sjSeen" name="sjSeen" checked=${formData.sjSeen} onChange=${handleChange} />` : ''}
+                            <label for="sjSeen">SJ gesehen: ${!isEditing ? (formData.sjSeen ? 'Ja' : 'Nein') : ''}</label>
+                        </div>
+                         <div class="checkbox-item">
+                             ${isEditing ? html`<input type="checkbox" id="inactive" name="inactive" checked=${formData.inactive} onChange=${handleChange} />` : ''}
+                            <label for="inactive">Kunde inaktiv: ${!isEditing ? (formData.inactive ? 'Ja' : 'Nein') : ''}</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style=${{display: editingCustomerId && activeTab === 'doings' ? 'block' : 'none'}} class="tab-content">
                 <div class="form-group">
                     <label for="nextSteps">Was soll als nächstes gemacht werden / worauf warten wir?</label>
                     <textarea id="nextSteps" name="nextSteps" onInput=${handleChange}>${formData.nextSteps}</textarea>
                 </div>
                  <div class="form-group">
-                    <div class="checkbox-group" style=${{ height: 'auto', gap: '2rem' }}>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="sjSeen" name="sjSeen" checked=${formData.sjSeen} onChange=${handleChange} />
-                            <label for="sjSeen">SJ gesehen</label>
-                        </div>
-                         <div class="checkbox-item">
-                            <input type="checkbox" id="inactive" name="inactive" checked=${formData.inactive} onChange=${handleChange} />
-                            <label for="inactive">Kunde inaktiv</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
                     <label>Reminder für eine Aufgabe</label>
                     <div style=${{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <button type="button" class="btn btn-secondary" onClick=${() => handleReminderChange(7)}>1 Woche</button>
@@ -1051,15 +1065,22 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
                         ${formData.reminderDate && html`<button type="button" class="btn btn-danger" onClick=${() => handleReminderChange(null)}>Löschen</button>`}
                     </div>
                 </div>
-                <div class="form-actions">
-                     ${editingCustomerId && html`
-                        <button type="button" class="btn btn-danger" onClick=${handleDelete} style=${{ marginRight: 'auto' }}>Kunde löschen</button>
-                    `}
-                    <button type="submit" class="btn btn-primary">Speichern</button>
-                    ${editingCustomerId && formData.email && html`<a href="mailto:${formData.email}" class="btn btn-secondary">Neue E-Mail</a>`}
-                    <button type="button" class="btn btn-secondary" onClick=${() => setView('customerList')}>Abbrechen</button>
-                </div>
-            </form>
+            </div>
+
+            <div class="form-actions">
+                ${editingCustomerId && html`
+                    <button type="button" class="btn btn-danger" onClick=${handleDelete} style=${{ marginRight: 'auto' }}>Kunde löschen</button>
+                `}
+                
+                ${showSaveActions ? html`
+                    <button type="button" class="btn btn-primary" onClick=${handleSubmit}>Speichern</button>
+                    <button type="button" class="btn btn-secondary" onClick=${handleCancelEdit}>Abbrechen</button>
+                ` : html`
+                    ${editingCustomerId && html`<button type="button" class="btn btn-primary" onClick=${() => setIsEditing(true)}>Bearbeiten</button>`}
+                    <button type="button" class="btn btn-secondary" onClick=${() => setView('customerList')}>Zurück zur Liste</button>
+                `}
+                 ${editingCustomerId && formData.email && html`<a href="mailto:${formData.email}" class="btn btn-secondary">Neue E-Mail</a>`}
+            </div>
         </div>
 
         <div style=${{display: editingCustomerId && activeTab === 'history' ? 'block' : 'none'}}>
@@ -1090,7 +1111,7 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
                                         ${!note.isFuture ? html`
                                              <button class="btn btn-secondary btn-sm" onClick=${() => handleStartEditNote(note)}>Bearbeiten</button>
                                         ` : html`
-                                             <button class="btn btn-secondary btn-sm" onClick=${() => setActiveTab('info')}>Aufgabe bearbeiten</button>
+                                             <button class="btn btn-secondary btn-sm" onClick=${() => setActiveTab('doings')}>Aufgabe bearbeiten</button>
                                         `}
                                     </div>
                                     <p>${note.content}</p>
@@ -1122,7 +1143,10 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, customers, del
 
 const Settings = ({ settings, setSettings, setView, customers, setCustomers, isDarkMode, setIsDarkMode, currentUser, setCurrentUser }: { settings: CompanySettings; setSettings: (value: CompanySettings | ((prev: CompanySettings) => CompanySettings)) => void; setView: (v: View) => void; customers: Customer[]; setCustomers: (value: Customer[] | ((prev: Customer[]) => Customer[])) => void; isDarkMode: boolean; setIsDarkMode: (value: boolean | ((prev: boolean) => boolean)) => void; currentUser: string; setCurrentUser: (user: string | null) => void; }) => {
     const [importSuccess, setImportSuccess] = useState(false);
+    const [newSource, setNewSource] = useState('');
     
+    const customerSources = settings.customerSources || [];
+
     useEffect(() => {
         if (importSuccess) {
             alert('Daten erfolgreich importiert! Die Anwendung wurde aktualisiert.');
@@ -1144,6 +1168,24 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
                 setSettings(prev => ({ ...prev, logo: event.target?.result as string }));
             };
             reader.readAsDataURL(file);
+        }
+    };
+    
+    const handleAddSource = () => {
+        const trimmedSource = newSource.trim();
+        if (trimmedSource && !customerSources.includes(trimmedSource)) {
+            setSettings(prev => ({ ...prev, customerSources: [...(prev.customerSources || []), trimmedSource] }));
+            setNewSource('');
+        }
+    };
+
+    const handleDeleteSource = (sourceToDelete: string) => {
+        if (customerSources.length <= 1) {
+            alert('Die letzte Quelle kann nicht gelöscht werden.');
+            return;
+        }
+        if (window.confirm(`Sind Sie sicher, dass Sie die Quelle "${sourceToDelete}" löschen möchten?`)) {
+            setSettings(prev => ({ ...prev, customerSources: (prev.customerSources || []).filter(s => s !== sourceToDelete) }));
         }
     };
     
@@ -1400,7 +1442,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
             ${settings.logo && html`<img src=${settings.logo} alt="Logo preview" style=${{ height: '50px', marginTop: '1rem' }} />`}
         </div>
 
-        <div class="personalization-section">
+        <div class="settings-section">
              <h3>Personalisierung & Ansicht</h3>
               <div class="form-group">
                  <p>Angemeldet als: <strong>${currentUser}</strong></p>
@@ -1414,6 +1456,26 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
                         <span class="slider"></span>
                     </label>
                 </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Kundenquellen verwalten</h3>
+            <p>Passen Sie die Optionen für das Feld "Woher kommt der Kunde?" an.</p>
+            <div class="source-list">
+                ${customerSources.map(source => html`
+                    <div key=${source} class="source-list-item">
+                        <span>${source}</span>
+                        <button class="btn btn-danger btn-sm" title="Quelle löschen" onClick=${() => handleDeleteSource(source)}>Löschen</button>
+                    </div>
+                `)}
+                 ${customerSources.length === 0 && html`<p class="text-light">Keine Quellen definiert.</p>`}
+            </div>
+            <div class="add-source-form">
+                <div class="form-group">
+                    <input type="text" placeholder="Neue Quelle" value=${newSource} onInput=${(e: Event) => setNewSource((e.target as HTMLInputElement).value)} onKeyDown=${(e: KeyboardEvent) => e.key === 'Enter' && handleAddSource()} />
+                </div>
+                <button type="button" class="btn btn-secondary" onClick=${handleAddSource}>Hinzufügen</button>
             </div>
         </div>
 
@@ -1457,7 +1519,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
 const App = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [customers, setCustomers] = useLocalStorage<Customer[]>('crm_customers', []);
-  const [settings, setSettings] = useLocalStorage<CompanySettings>('crm_settings', { companyName: 'Meine Firma', logo: null });
+  const [settings, setSettings] = useLocalStorage<CompanySettings>('crm_settings', { companyName: 'Meine Firma', logo: null, customerSources: ['Google', 'Empfehlung', 'Messe', 'Sonstiges'] });
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [isDarkMode, setIsDarkMode] = useLocalStorage('crm_dark_mode', false);
@@ -1504,9 +1566,9 @@ const App = () => {
       case 'dashboard':
         return html`<${Dashboard} setView=${setView} setEditingCustomerId=${setEditingCustomerId} customers=${customers} saveCustomer=${saveCustomer} settings=${settings} currentUser=${currentUser} />`;
       case 'customerList':
-        return html`<${CustomerList} customers=${customers} setView=${setView} setEditingCustomerId=${setEditingCustomerId} deleteCustomer=${deleteCustomer} />`;
+        return html`<${CustomerList} customers=${customers} setView=${setView} setEditingCustomerId=${setEditingCustomerId} deleteCustomer=${deleteCustomer} settings=${settings} />`;
       case 'customerForm':
-        return html`<${CustomerForm} saveCustomer=${saveCustomer} setView=${setView} editingCustomerId=${editingCustomerId} customers=${customers} deleteCustomer=${deleteCustomer} setIsFormDirty=${setIsFormDirty} />`;
+        return html`<${CustomerForm} saveCustomer=${saveCustomer} setView=${setView} editingCustomerId=${editingCustomerId} setEditingCustomerId=${setEditingCustomerId} customers=${customers} deleteCustomer=${deleteCustomer} isFormDirty=${isFormDirty} setIsFormDirty=${setIsFormDirty} settings=${settings} />`;
        case 'doings':
         return html`<${Doings} customers=${customers} saveCustomer=${saveCustomer} setView=${setView} setEditingCustomerId=${setEditingCustomerId} />`;
       case 'settings':
