@@ -17,6 +17,56 @@ interface AdditionalContact {
   email: string;
 }
 
+type TrafficLightStatus = 'red' | 'yellow' | 'green';
+
+interface ProjectChecklist {
+  // Vertrag und Basis
+  contractPresent: TrafficLightStatus;
+  serviceContract: TrafficLightStatus;
+  specialAgreement1: TrafficLightStatus;
+  specialAgreement2: TrafficLightStatus;
+  specialAgreement3: TrafficLightStatus;
+  nda: TrafficLightStatus;
+  
+  // Planung und Technik
+  scheduleSetup: TrafficLightStatus;
+  setupPlan: TrafficLightStatus;
+  levelSpacingDefined: TrafficLightStatus;
+  levelSpacingRetrieval: TrafficLightStatus;
+  dimSkylights: TrafficLightStatus;
+  wifi: TrafficLightStatus;
+  trailerAssemblyInstructions: TrafficLightStatus;
+  trailerAssemblyDone: TrafficLightStatus;
+
+  // Schnittstellen und Prozesse
+  softwareInterface: TrafficLightStatus;
+  sjUser: TrafficLightStatus;
+  picksNotGuaranteed: TrafficLightStatus;
+  obligationsHandover: TrafficLightStatus;
+  pickByLight: TrafficLightStatus;
+  serviceHours: TrafficLightStatus;
+
+  // Projektphasen (formerly Milestones)
+  phasePlanning: TrafficLightStatus;      // In Planung
+  phaseDelivery: TrafficLightStatus;      // Anlieferung
+  phaseAssembly: TrafficLightStatus;      // Montage
+  phaseTest: TrafficLightStatus;          // Testbetrieb
+  phaseClientOps: TrafficLightStatus;     // Kundenbetrieb
+  phaseGoLive: TrafficLightStatus;        // Go-Live
+}
+
+interface Project {
+  id: string;
+  title: string;
+  projectManager: string;
+  accountManager: string;
+  client: string; // Auftraggeber
+  techSpecs: string;
+  specials: string; // Infos & Besonderheiten
+  checklist: ProjectChecklist;
+  checklistNotes: Record<string, string>; // Notes for each checklist item key
+}
+
 interface Customer {
   id: string;
   companyName: string;
@@ -35,6 +85,7 @@ interface Customer {
   info: string;
   inactive: boolean;
   additionalContacts: AdditionalContact[];
+  projects: Project[];
 }
 
 interface CompanySettings {
@@ -107,9 +158,45 @@ const safeFormatNullableDateForStorage = (dateInput: any): string | null => {
     return date.toISOString().split('T')[0];
 };
 
+// Ensure we always get a valid status, defaulting to red if missing/undefined
+const getSafeStatus = (status: string | undefined | null): TrafficLightStatus => {
+    if (status === 'green') return 'green';
+    if (status === 'yellow') return 'yellow';
+    return 'red';
+};
+
+const PHASES_CONFIG = [
+    { key: 'phasePlanning', label: 'Planung' },
+    { key: 'phaseDelivery', label: 'Anlieferung' },
+    { key: 'phaseAssembly', label: 'Montage' },
+    { key: 'phaseTest', label: 'Testbetrieb' },
+    { key: 'phaseClientOps', label: 'Kundenbetrieb' },
+    { key: 'phaseGoLive', label: 'Go-Live' }
+];
+
+const getCalculatedPhase = (checklist: ProjectChecklist): string => {
+    // Priority 1: Yellow (In Progress) - return the most advanced active phase
+    // We iterate normally to find the FIRST yellow phase
+    for (const p of PHASES_CONFIG) {
+        if (checklist?.[p.key as keyof ProjectChecklist] === 'yellow') return p.label;
+    }
+
+    // Priority 2: Green (Completed) - return the most advanced completed phase
+    // We iterate backwards to find the LAST green phase
+    for (let i = PHASES_CONFIG.length - 1; i >= 0; i--) {
+        const p = PHASES_CONFIG[i];
+        if (checklist?.[p.key as keyof ProjectChecklist] === 'green') {
+             if (p.key === 'phaseGoLive') return 'Projekt abgeschlossen';
+             return `${p.label} (Fertig)`;
+        }
+    }
+
+    return 'Neu / In Vorbereitung';
+};
+
 // --- UI COMPONENTS ---
 
-const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: any }) => {
+const Modal = ({ isOpen, onClose, title, children, size = 'normal' }: { isOpen: boolean; onClose: () => void; title: string; children: any; size?: 'normal' | 'large' }) => {
     if (!isOpen) return null;
 
     useEffect(() => {
@@ -124,7 +211,7 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
 
     return html`
         <div class="modal-backdrop" onClick=${onClose}>
-            <div class="modal-content" onClick=${(e: Event) => e.stopPropagation()}>
+            <div class="modal-content ${size === 'large' ? 'modal-large' : ''}" onClick=${(e: Event) => e.stopPropagation()}>
                 <div class="modal-header">
                     <h3>${title}</h3>
                     <button onClick=${onClose} class="close-button">×</button>
@@ -178,13 +265,266 @@ const Header = ({ settings, setView, currentUser }: { settings: CompanySettings,
       </div>
       <nav>
         <div class="user-display">
-            Angemeldet als: <strong>${currentUser}</strong>
+            <strong>${currentUser}</strong>
         </div>
         <button onClick=${() => setView('dashboard')}>Dashboard</button>
-        <button onClick=${() => setView('settings')}>Einstellungen</button>
+        <button onClick=${() => setView('customerList')}>Kunden</button>
+        <button onClick=${() => setView('settings')} title="Einstellungen" style="display: flex; align-items: center; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        </button>
       </nav>
     </header>
   `;
+};
+
+const TrafficLightControl = ({ status, onChange, label, note, onNoteChange }: { status: TrafficLightStatus, onChange: (s: TrafficLightStatus) => void, label: string, note?: string, onNoteChange?: (n: string) => void }) => {
+    const [showNote, setShowNote] = useState(!!note);
+
+    useEffect(() => {
+        if (note) setShowNote(true);
+    }, [note]);
+
+    // Ensure status matches one of the expected values, otherwise default styling applies (opacity)
+    const activeRed = status === 'red' ? 'active' : '';
+    const activeYellow = status === 'yellow' ? 'active' : '';
+    const activeGreen = status === 'green' ? 'active' : '';
+
+    return html`
+        <div class="traffic-light-wrapper">
+            <div class="traffic-light-row">
+                <div class="traffic-lights">
+                    <button 
+                        type="button"
+                        title="Nicht erledigt"
+                        class="traffic-light red ${activeRed}" 
+                        onClick=${() => onChange('red')}
+                    ></button>
+                    <button 
+                        type="button"
+                        title="Fehlende Infos"
+                        class="traffic-light yellow ${activeYellow}" 
+                        onClick=${() => onChange('yellow')}
+                    ></button>
+                    <button 
+                        type="button"
+                        title="Erledigt"
+                        class="traffic-light green ${activeGreen}" 
+                        onClick=${() => onChange('green')}
+                    ></button>
+                </div>
+                <span class="traffic-label">${label}</span>
+                ${onNoteChange && html`
+                    <button type="button" class="btn-icon-small ${showNote ? 'active' : ''}" onClick=${() => setShowNote(!showNote)} title="Notiz hinzufügen">
+                        📝
+                    </button>
+                `}
+            </div>
+            ${showNote && onNoteChange && html`
+                <div class="traffic-note-container">
+                    <input 
+                        type="text" 
+                        class="traffic-note-input" 
+                        placeholder="Notiz zu ${label}..." 
+                        value=${note || ''} 
+                        onInput=${(e: Event) => onNoteChange((e.target as HTMLInputElement).value)}
+                    />
+                </div>
+            `}
+        </div>
+    `;
+};
+
+const ProjectProgressBar = ({ checklist }: { checklist: ProjectChecklist }) => {
+    return html`
+        <div class="project-progress-bar">
+            ${PHASES_CONFIG.map((phase, index) => {
+                const status = getSafeStatus(checklist?.[phase.key as keyof ProjectChecklist]);
+                // Map 'red' to a distinct class for progress bar context if needed, or just use 'red'
+                // In the progress bar, 'red' (not done) usually renders as gray/empty if it's a future step.
+                // We will handle the visual appearance in CSS.
+                return html`
+                    <div 
+                        class="progress-segment ${status}" 
+                        title="${phase.label}: ${status === 'green' ? 'Erledigt' : status === 'yellow' ? 'In Arbeit' : 'Offen'}"
+                    ></div>
+                `;
+            })}
+        </div>
+    `;
+};
+
+const ProjectEditor = ({ project, onSave, onCancel }: { project: Project | null, onSave: (p: Project) => void, onCancel: () => void }) => {
+    const initialChecklist: ProjectChecklist = {
+        contractPresent: 'red', serviceContract: 'red', specialAgreement1: 'red', specialAgreement2: 'red', specialAgreement3: 'red', nda: 'red',
+        scheduleSetup: 'red', setupPlan: 'red', levelSpacingDefined: 'red', levelSpacingRetrieval: 'red', dimSkylights: 'red', wifi: 'red', trailerAssemblyInstructions: 'red', trailerAssemblyDone: 'red',
+        softwareInterface: 'red', sjUser: 'red', picksNotGuaranteed: 'red', obligationsHandover: 'red', pickByLight: 'red', serviceHours: 'red',
+        phasePlanning: 'red', phaseDelivery: 'red', phaseAssembly: 'red', phaseTest: 'red', phaseClientOps: 'red', phaseGoLive: 'red'
+    };
+
+    // Initialize state, merging existing checklist with default structure to ensure all keys exist
+    const [formData, setFormData] = useState<Project>(() => {
+        if (project) {
+            return {
+                ...project,
+                checklist: { ...initialChecklist, ...(project.checklist || {}) },
+                checklistNotes: project.checklistNotes || {}
+            };
+        }
+        return {
+            id: crypto.randomUUID(),
+            title: '',
+            projectManager: '',
+            accountManager: 'Julian Trillken',
+            client: '',
+            techSpecs: '',
+            specials: '',
+            checklist: initialChecklist,
+            checklistNotes: {}
+        };
+    });
+
+    const handleChange = (e: Event) => {
+        const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+        setFormData(prev => ({ ...prev, [target.name]: target.value }));
+    };
+
+    const handleChecklistChange = (key: keyof ProjectChecklist, status: TrafficLightStatus) => {
+        setFormData(prev => ({
+            ...prev,
+            checklist: {
+                ...prev.checklist,
+                [key]: status
+            }
+        }));
+    };
+
+    const handleChecklistNoteChange = (key: string, note: string) => {
+        setFormData(prev => ({
+            ...prev,
+            checklistNotes: {
+                ...prev.checklistNotes,
+                [key]: note
+            }
+        }));
+    };
+
+    const handleSubmit = (e: Event) => {
+        e.preventDefault();
+        if (!formData.title) {
+            alert('Bitte Projekttitel eingeben');
+            return;
+        }
+        onSave(formData);
+    };
+
+    // Render helper to avoid repetition
+    const renderControl = (key: keyof ProjectChecklist, label: string) => html`
+        <${TrafficLightControl} 
+            label=${label} 
+            status=${getSafeStatus(formData.checklist[key])} 
+            onChange=${(s: TrafficLightStatus) => handleChecklistChange(key, s)}
+            note=${formData.checklistNotes?.[key]}
+            onNoteChange=${(n: string) => handleChecklistNoteChange(key, n)}
+        />
+    `;
+
+    return html`
+        <div class="project-editor">
+            <div class="project-section">
+                <h4>Projektdaten</h4>
+                <div class="grid-2-col">
+                    <div class="form-group">
+                        <label>Projekttitel *</label>
+                        <input type="text" name="title" value=${formData.title} onInput=${handleChange} required placeholder="z.B. Lagererweiterung Werk 2" />
+                    </div>
+                    <div class="form-group">
+                        <label>Auftraggeber</label>
+                        <input type="text" name="client" value=${formData.client} onInput=${handleChange} />
+                    </div>
+                    <div class="form-group">
+                        <label>Projektbetreuer</label>
+                        <input type="text" name="projectManager" value=${formData.projectManager} onInput=${handleChange} />
+                    </div>
+                    <div class="form-group">
+                        <label>Kundenbetreuer</label>
+                        <input type="text" name="accountManager" value=${formData.accountManager} onInput=${handleChange} />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Technik / Spezifikationen</label>
+                    <textarea name="techSpecs" rows="2" value=${formData.techSpecs} onInput=${handleChange}></textarea>
+                </div>
+            </div>
+
+            <div class="project-section">
+                <h4>Projektfortschritt & Checklisten</h4>
+                <div class="checklist-grid-container">
+                    
+                    <div class="checklist-group">
+                        <h5>Vertrag und Basis</h5>
+                        ${renderControl('contractPresent', 'Vertrag vorhanden?')}
+                        ${renderControl('serviceContract', 'Servicevertrag vorhanden?')}
+                        ${renderControl('specialAgreement1', 'Sondervereinbarungen 1')}
+                        ${renderControl('specialAgreement2', 'Sondervereinbarungen 2')}
+                        ${renderControl('specialAgreement3', 'Sondervereinbarungen 3')}
+                        ${renderControl('nda', 'NDA')}
+                    </div>
+
+                    <div class="checklist-group">
+                        <h5>Planung und Technik</h5>
+                        ${renderControl('scheduleSetup', 'Aufbau Zeitplan')}
+                        ${renderControl('setupPlan', 'Aufbauplan')}
+                        ${renderControl('levelSpacingDefined', 'Ebenenabstände definiert')}
+                        ${renderControl('levelSpacingRetrieval', 'Ebenenabstand Auslagerung')}
+                        ${renderControl('dimSkylights', 'Oberlichter abdunkeln')}
+                        ${renderControl('wifi', 'WLAN')}
+                        ${renderControl('trailerAssemblyInstructions', 'Anhängeraufbauanleitung')}
+                        ${renderControl('trailerAssemblyDone', 'Anhängeraufbau durch')}
+                    </div>
+
+                    <div class="checklist-group">
+                        <h5>Schnittstellen und Prozesse</h5>
+                        ${renderControl('softwareInterface', 'Software Schnittstellendef.')}
+                        ${renderControl('sjUser', 'SJ User')}
+                        ${renderControl('picksNotGuaranteed', 'Picks sind nicht garantiert?')}
+                        ${renderControl('obligationsHandover', 'Pflichten zu Abgabe')}
+                        ${renderControl('pickByLight', 'Pick by Light')}
+                        ${renderControl('serviceHours', 'Arbeitszeiten für Service')}
+                    </div>
+                    
+                     <div class="checklist-group">
+                        <h5>Projektphasen</h5>
+                        ${renderControl('phasePlanning', 'In Planung')}
+                        ${renderControl('phaseDelivery', 'Anlieferung')}
+                        ${renderControl('phaseAssembly', 'Montage')}
+                        ${renderControl('phaseTest', 'Testbetrieb')}
+                        ${renderControl('phaseClientOps', 'Kundenbetrieb')}
+                        ${renderControl('phaseGoLive', 'Go-Live')}
+                    </div>
+                </div>
+            </div>
+
+            <div class="project-section">
+                <h4>Details & Besonderheiten</h4>
+                <div class="form-group">
+                    <label>Aktuelle Projektphase (Automatisch)</label>
+                    <input type="text" value=${getCalculatedPhase(formData.checklist)} disabled style="background-color: var(--secondary-color); opacity: 0.8;" />
+                </div>
+                <div class="form-group">
+                    <label>Infos & Besonderheiten</label>
+                    <textarea name="specials" rows="3" value=${formData.specials} onInput=${handleChange}></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onClick=${handleSubmit}>Projekt speichern</button>
+                <button type="button" class="btn btn-secondary" onClick=${onCancel}>Abbrechen</button>
+            </div>
+        </div>
+    `;
 };
 
 const QuickNote = ({ customers, saveCustomer }: { customers: Customer[], saveCustomer: (customer: Customer) => void }) => {
@@ -446,13 +786,49 @@ const ROICalculatorPreview = ({ onOpen }: { onOpen: () => void }) => {
 };
 
 
+const ProjectDashboardWidget = ({ customers, setView, setEditingCustomerId }: { customers: Customer[], setView: (v: View) => void, setEditingCustomerId: (id: string) => void }) => {
+    const allProjects = customers
+        .flatMap(c => (c.projects || []).map(p => ({ ...p, customerId: c.id, customerName: c.companyName })))
+        .filter(p => p.checklist?.phaseGoLive !== 'green'); // Active projects (Go-Live not done/green)
+
+    if (allProjects.length === 0) return null;
+
+    return html`
+        <div class="card" style=${{ marginBottom: '2rem' }}>
+            <h2>Aktuelle Projekte</h2>
+            <div class="dashboard-projects-grid">
+                ${allProjects.map(p => html`
+                    <div class="dashboard-project-item" onClick=${() => { setEditingCustomerId(p.customerId); setView('customerForm'); }}>
+                        <div class="project-header">
+                            <strong>${p.title}</strong>
+                            <span class="project-customer">${p.customerName}</span>
+                        </div>
+                        <div class="project-status-row">
+                            <span class="status-label">Phase:</span>
+                            <span class="status-value">${getCalculatedPhase(p.checklist)}</span>
+                        </div>
+                        <${ProjectProgressBar} checklist=${p.checklist} />
+                    </div>
+                `)}
+            </div>
+        </div>
+    `;
+};
+
+
 const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer, currentUser }: { setView: (view: View) => void; setEditingCustomerId: (id: string | null) => void; customers: Customer[]; saveCustomer: (customer: Customer) => void; settings: CompanySettings; currentUser: string; }) => {
     const [isRoiModalOpen, setIsRoiModalOpen] = useState(false);
     
     const upcomingDoings = customers
-        .filter(c => c.reminderDate && !c.inactive)
-        .sort((a, b) => new Date(a.reminderDate!).getTime() - new Date(b.reminderDate!).getTime())
-        .slice(0, 5);
+        .filter(c => {
+            if (!c.reminderDate || c.inactive) return false;
+            const due = new Date(c.reminderDate);
+            const limit = new Date();
+            limit.setDate(limit.getDate() + 3); // +3 Tage
+            limit.setHours(23, 59, 59, 999);
+            return due <= limit; // Überfällig oder in den nächsten 3 Tagen
+        })
+        .sort((a, b) => new Date(a.reminderDate!).getTime() - new Date(b.reminderDate!).getTime());
 
     const welcomeMessage = `Willkommen zurück, ${currentUser}!`;
 
@@ -475,7 +851,7 @@ const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer, cur
               </div>
             </div>
             <div class="card">
-                <h2>Nächste 5 offene Doings</h2>
+                <h2>Anstehende Aufgaben</h2>
                 ${upcomingDoings.length > 0 ? html`
                     <ul class="upcoming-doings-list">
                         ${upcomingDoings.map(customer => {
@@ -492,12 +868,17 @@ const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer, cur
                         })}
                     </ul>
                 ` : html`
-                    <p>Keine bevorstehenden Aufgaben. Gut gemacht!</p>
+                    <p>Keine zeitnahen Aufgaben anstehend. Gut gemacht!</p>
                 `}
             </div>
             <${QuickNote} customers=${customers} saveCustomer=${saveCustomer} />
         </div>
-        <div style=${{marginTop: '2rem'}}>
+        
+        <div style=${{ marginTop: '2rem' }}>
+            <${ProjectDashboardWidget} customers=${customers} setView=${setView} setEditingCustomerId=${setEditingCustomerId} />
+        </div>
+
+        <div style=${{marginTop: '1rem'}}>
              <${ROICalculatorPreview} onOpen=${() => setIsRoiModalOpen(true)} />
         </div>
         <${Modal} isOpen=${isRoiModalOpen} onClose=${() => setIsRoiModalOpen(false)} title="ROI Rechner: Automatisches Kleinteilelager">
@@ -507,7 +888,7 @@ const Dashboard = ({ setView, setEditingCustomerId, customers, saveCustomer, cur
   `;
 };
 
-const Doings = ({ customers, saveCustomer, setView, setEditingCustomerId }: { customers: Customer[], saveCustomer: (customer: Customer) => void, setView: (view: View) => void, setEditingCustomerId: (id: string) => void }) => {
+const Doings = ({ customers, saveCustomer, setView, setEditingCustomerId }: { customers: Customer[], saveCustomer: (customer: Customer) => void, setView: (view: View, options?: { force?: boolean }) => void, setEditingCustomerId: (id: string) => void }) => {
     const openTasks = customers
         .filter(c => c.reminderDate && !c.inactive)
         .sort((a, b) => new Date(a.reminderDate!).getTime() - new Date(b.reminderDate!).getTime());
@@ -692,7 +1073,6 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
               <th>Ansprechpartner</th>
               <th>Letzter Kontakt</th>
               <th>Nächste Schritte / Reminder</th>
-              <th>Aktionen</th>
             </tr>
           </thead>
           <tbody>
@@ -724,16 +1104,6 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
                         </div>
                     `}
                   </td>
-                  <td>
-                    <div class="actions">
-                        <button class="btn btn-secondary" onClick=${() => { setEditingCustomerId(customer.id); setView('customerForm'); }}>Bearbeiten</button>
-                        <button class="btn btn-danger" onClick=${() => {
-                            if (window.confirm('Sind Sie sicher, dass Sie diesen Kunden endgültig löschen möchten?')) {
-                                deleteCustomer(customer.id);
-                            }
-                        }}>Löschen</button>
-                    </div>
-                  </td>
                 </tr>
               `
             })}
@@ -758,6 +1128,11 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
   const [newContactName, setNewContactName] = useState('');
   const [newContactEmail, setNewContactEmail] = useState('');
 
+  // Project State
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+
+
   const getInitialFormData = useCallback(() => {
     const availableSources = settings.customerSources || [];
     return {
@@ -776,6 +1151,7 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
       info: customer?.info || '',
       inactive: customer?.inactive || false,
       additionalContacts: customer?.additionalContacts || [],
+      projects: customer?.projects || [],
     };
   }, [customer, settings.customerSources]);
 
@@ -785,6 +1161,7 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
     setIsEditing(editingCustomerId === null);
     setFormData(getInitialFormData());
     setIsFormDirty(false);
+    setActiveTab('info');
   }, [editingCustomerId, getInitialFormData]);
 
   const handleChange = (e: Event) => {
@@ -921,6 +1298,38 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
     setIsFormDirty(true);
   };
   
+  const handleSaveProject = (project: Project) => {
+      let updatedProjects;
+      if (formData.projects.some(p => p.id === project.id)) {
+          updatedProjects = formData.projects.map(p => p.id === project.id ? project : p);
+      } else {
+          updatedProjects = [...formData.projects, project];
+      }
+      
+      setFormData(prev => ({ ...prev, projects: updatedProjects }));
+      // Auto-save customer when project is updated to persist state immediately
+      if (customer) {
+         const updatedCustomer = { ...customer, projects: updatedProjects };
+         saveCustomer(updatedCustomer);
+      }
+      
+      setIsProjectModalOpen(false);
+      setEditingProject(null);
+      setIsFormDirty(false); // Since we auto-save
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+      if(window.confirm('Möchten Sie dieses Projekt wirklich löschen?')) {
+        const updatedProjects = formData.projects.filter(p => p.id !== projectId);
+        setFormData(prev => ({ ...prev, projects: updatedProjects }));
+         if (customer) {
+             const updatedCustomer = { ...customer, projects: updatedProjects };
+             saveCustomer(updatedCustomer);
+         }
+         setIsFormDirty(false);
+      }
+  };
+
   const getCombinedHistory = () => {
       if (!customer) return [];
       const historyItems: Note[] = [...(customer.notes || [])];
@@ -951,11 +1360,12 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
             <div class="tabs">
                 <button class="tab-link ${activeTab === 'info' ? 'active' : ''}" onClick=${() => setActiveTab('info')}>Kundeninformationen</button>
                 <button class="tab-link ${activeTab === 'doings' ? 'active' : ''}" onClick=${() => setActiveTab('doings')}>Doings</button>
+                <button class="tab-link ${activeTab === 'projects' ? 'active' : ''}" onClick=${() => setActiveTab('projects')}>Projekte</button>
                 <button class="tab-link ${activeTab === 'history' ? 'active' : ''}" onClick=${() => setActiveTab('history')}>Historie</button>
             </div>
         `}
 
-        <div style=${{ display: activeTab === 'history' && editingCustomerId ? 'none' : 'block' }}>
+        <div style=${{ display: (activeTab === 'history' || activeTab === 'projects') && editingCustomerId ? 'none' : 'block' }}>
             <div style=${{display: !editingCustomerId || activeTab === 'info' ? 'block' : 'none'}} class="tab-content">
                 <div style=${{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
                     <div class="form-group">
@@ -1082,6 +1492,49 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
                  ${editingCustomerId && formData.email && html`<a href="mailto:${formData.email}" class="btn btn-secondary">Neue E-Mail</a>`}
             </div>
         </div>
+        
+        <div style=${{display: editingCustomerId && activeTab === 'projects' ? 'block' : 'none'}} class="tab-content">
+            <div class="customer-list-header">
+                <h3>Projekte</h3>
+                <button class="btn btn-primary" onClick=${() => { setEditingProject(null); setIsProjectModalOpen(true); }}>Neues Projekt</button>
+            </div>
+            
+            <div class="projects-list">
+                ${(formData.projects || []).length === 0 
+                    ? html`<p class="text-light">Keine Projekte vorhanden.</p>` 
+                    : (formData.projects || []).map(p => html`
+                        <div class="card project-card-improved">
+                            <div class="project-card-header">
+                                <h4>${p.title}</h4>
+                                <div class="project-actions">
+                                     <button class="btn btn-sm btn-secondary" onClick=${() => { setEditingProject(p); setIsProjectModalOpen(true); }}>Bearbeiten</button>
+                                     <button class="btn btn-sm btn-danger" onClick=${() => handleDeleteProject(p.id)}>Löschen</button>
+                                </div>
+                            </div>
+                            <div class="project-info-grid">
+                                <div class="info-item">
+                                    <small>Kundenbetreuer</small>
+                                    <div>${p.accountManager || '-'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <small>Projektbetreuer</small>
+                                    <div>${p.projectManager || '-'}</div>
+                                </div>
+                                <div class="info-item full-width">
+                                    <small>Aktuelle Phase</small>
+                                    <div class="phase-highlight">${getCalculatedPhase(p.checklist)}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="project-phases-summary">
+                                <${ProjectProgressBar} checklist=${p.checklist} />
+                                <small class="text-light">Fortschritt</small>
+                            </div>
+                        </div>
+                    `)
+                }
+            </div>
+        </div>
 
         <div style=${{display: editingCustomerId && activeTab === 'history' ? 'block' : 'none'}}>
             <div class="tab-content">
@@ -1137,6 +1590,10 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
                  </div>
             </div>
         </div>
+        
+        <${Modal} isOpen=${isProjectModalOpen} onClose=${() => setIsProjectModalOpen(false)} title=${editingProject ? 'Projekt bearbeiten' : 'Neues Projekt'} size="large">
+            <${ProjectEditor} project=${editingProject} onSave=${handleSaveProject} onCancel=${() => setIsProjectModalOpen(false)} />
+        </${Modal}>
     </div>
   `;
 };
@@ -1227,6 +1684,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
                                 reminderDate: safeFormatNullableDateForStorage(reminderDate),
                                 notes: [],
                                 additionalContacts: [],
+                                projects: []
                             });
                         }
                     });
@@ -1257,6 +1715,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
                                 reminderDate: safeFormatNullableDateForStorage(row.reminderDate || row.ReminderDate),
                                 notes: [],
                                 additionalContacts: [],
+                                projects: []
                             });
                         }
                     });

@@ -1,3 +1,4 @@
+
 :root {
   --primary-color: #007bff;
   --primary-hover: #0056b3;
@@ -221,6 +222,28 @@ body.dark-mode .btn-success:hover:not(:disabled) {
     font-size: 0.875rem;
 }
 
+.btn-icon-small {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: auto;
+    transition: all 0.2s;
+    color: var(--text-light);
+}
+
+.btn-icon-small:hover, .btn-icon-small.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
 .customer-list-header {
     display: flex;
     justify-content: space-between;
@@ -404,6 +427,10 @@ input:read-only {
   max-height: 90vh;
   overflow-y: auto;
   animation: modal-fade-in 0.3s ease-out;
+}
+
+.modal-content.modal-large {
+  max-width: 1100px;
 }
 
 @keyframes modal-fade-in {
@@ -1110,4 +1137,300 @@ input:checked + .slider:before {
 
 .add-source-form button {
     flex-shrink: 0;
+}
+
+/* --- PROJECT TOOL STYLES --- */
+
+.projects-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.project-card-improved {
+    background: var(--background-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.project-card-improved:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.project-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.project-card-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
+}
+
+.project-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.project-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.project-info-grid .info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.project-info-grid .info-item small {
+    color: var(--text-light);
+    margin-bottom: 0.25rem;
+}
+
+.project-info-grid .info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.phase-highlight {
+    background-color: rgba(0, 123, 255, 0.05);
+    padding: 0.5rem;
+    border-radius: 4px;
+    border-left: 3px solid var(--primary-color);
+    font-weight: 500;
+}
+
+body.dark-mode .phase-highlight {
+    background-color: rgba(64, 158, 255, 0.1);
+}
+
+.project-phases-summary {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Project Progress Bar */
+.project-progress-bar {
+    display: flex;
+    width: 100%;
+    height: 10px;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+body.dark-mode .project-progress-bar {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.progress-segment {
+    flex-grow: 1;
+    border-right: 2px solid var(--background-color);
+    transition: background-color 0.3s;
+}
+
+.progress-segment:last-child {
+    border-right: none;
+}
+
+.progress-segment.green {
+    background-color: var(--success-color);
+}
+
+.progress-segment.yellow {
+    background-color: var(--warning-color);
+}
+
+.progress-segment.red {
+    background-color: #e9ecef; /* Light Gray indicating 'future' or 'empty' */
+}
+
+body.dark-mode .progress-segment.red {
+    background-color: #3a3f4b;
+}
+
+/* Dashboard Project Widget */
+.dashboard-projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.dashboard-project-item {
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dashboard-project-item:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+body.dark-mode .dashboard-project-item:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+
+.project-header {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.5rem;
+}
+
+.project-customer {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.project-status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+}
+
+.status-label {
+    color: var(--text-light);
+}
+
+.status-value {
+    font-weight: 500;
+    color: var(--primary-color);
+}
+
+/* Project Editor */
+.project-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.project-section h4 {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+}
+
+.grid-2-col {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.checklist-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.checklist-group {
+    background-color: var(--secondary-color);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.checklist-group h5 {
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+/* Traffic Lights */
+.traffic-light-wrapper {
+    margin-bottom: 0.75rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid transparent;
+}
+
+.traffic-light-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.traffic-lights {
+    display: flex;
+    gap: 0.25rem;
+    background-color: rgba(0,0,0,0.05);
+    padding: 0.25rem;
+    border-radius: 20px;
+}
+
+body.dark-mode .traffic-lights {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.traffic-light {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0.3;
+}
+
+.traffic-light:hover {
+    opacity: 0.6;
+    transform: scale(1.1);
+}
+
+.traffic-light.active {
+    opacity: 1;
+    transform: scale(1.15);
+    box-shadow: 0 0 8px rgba(0,0,0,0.2);
+    border-color: transparent;
+}
+
+.traffic-light.red { background-color: #ff4d4f; }
+.traffic-light.yellow { background-color: #faad14; }
+.traffic-light.green { background-color: #52c41a; }
+
+.traffic-label {
+    font-size: 0.95rem;
+    flex-grow: 1;
+}
+
+.traffic-note-container {
+    margin-top: 0.5rem;
+    padding-left: 3rem;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.traffic-note-input {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--background-color);
 }
