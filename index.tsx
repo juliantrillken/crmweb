@@ -1,3 +1,4 @@
+
 import {render} from 'preact';
 import {useState, useEffect, useCallback, useMemo} from 'preact/hooks';
 import {html} from 'htm/preact';
@@ -70,14 +71,18 @@ interface Project {
 interface Customer {
   id: string;
   companyName: string;
+  salutation: string; // Herr / Frau
   contactPerson: string;
   address: string;
   email: string;
+  website: string; // Homepage
   phone: string;
+  mobilePhone: string; // Mobilnummer
   source: string;
   lastContact: string;
   firstContact: string;
   industry: string;
+  erpSystem: string; // Anbieter Warenwirtschaft
   nextSteps: string;
   reminderDate: string | null;
   notes: Note[];
@@ -297,7 +302,7 @@ const TrafficLightControl = ({ status, onChange, label, note, onNoteChange }: { 
             <div class="traffic-light-row">
                 <div class="traffic-lights">
                     <button 
-                        type="button"
+                        type="button" 
                         title="Nicht erledigt"
                         class="traffic-light red ${activeRed}" 
                         onClick=${() => onChange('red')}
@@ -1091,7 +1096,7 @@ const CustomerList = ({ customers, setView, setEditingCustomerId, deleteCustomer
                     <small>${customer.industry}</small>
                   </td>
                   <td>
-                    ${customer.contactPerson} 
+                    ${customer.salutation ? `${customer.salutation} ` : ''}${customer.contactPerson} 
                     ${customer.email && !showInactive && html`<a href="mailto:${customer.email}" class="email-icon" title=${`E-Mail an ${customer.contactPerson}`}>📧</a>`}
                     <br/><small>${customer.email}</small>
                   </td>
@@ -1137,14 +1142,18 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
     const availableSources = settings.customerSources || [];
     return {
       companyName: customer?.companyName || '',
+      salutation: customer?.salutation || '',
       contactPerson: customer?.contactPerson || '',
       address: customer?.address || '',
       email: customer?.email || '',
+      website: customer?.website || '',
       phone: customer?.phone || '',
+      mobilePhone: customer?.mobilePhone || '',
       source: customer?.source || (availableSources.length > 0 ? availableSources[0] : ''),
       lastContact: customer?.lastContact || new Date().toISOString().split('T')[0],
       firstContact: customer?.firstContact || new Date().toISOString().split('T')[0],
       industry: customer?.industry || '',
+      erpSystem: customer?.erpSystem || '',
       nextSteps: customer?.nextSteps || '',
       reminderDate: customer?.reminderDate || null,
       sjSeen: customer?.sjSeen || false,
@@ -1374,7 +1383,16 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
                     </div>
                     <div class="form-group">
                         <label for="contactPerson">Ansprechpartner</label>
-                         ${isEditing ? html`<input type="text" id="contactPerson" name="contactPerson" value=${formData.contactPerson} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.contactPerson} />`}
+                         ${isEditing ? html`
+                            <div style=${{display: 'flex', gap: '0.5rem'}}>
+                                <select name="salutation" value=${formData.salutation} onChange=${handleChange} style=${{width: 'auto'}}>
+                                    <option value="">-</option>
+                                    <option value="Herr">Herr</option>
+                                    <option value="Frau">Frau</option>
+                                </select>
+                                <input type="text" id="contactPerson" name="contactPerson" value=${formData.contactPerson} onInput=${handleChange} />
+                            </div>
+                         ` : html`<${DisplayField} value=${(formData.salutation ? formData.salutation + ' ' : '') + formData.contactPerson} />`}
                     </div>
                      <div class="form-group">
                         <label for="email">E-Mail</label>
@@ -1383,6 +1401,14 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
                     <div class="form-group">
                         <label for="phone">Telefonnummer</label>
                          ${isEditing ? html`<input type="tel" id="phone" name="phone" value=${formData.phone} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.phone} />`}
+                    </div>
+                    <div class="form-group">
+                        <label for="website">Website / Homepage</label>
+                         ${isEditing ? html`<input type="text" id="website" name="website" value=${formData.website} onInput=${handleChange} placeholder="https://www.beispiel.de" />` : html`<${DisplayField} value=${formData.website} />`}
+                    </div>
+                    <div class="form-group">
+                        <label for="mobilePhone">Mobilnummer</label>
+                         ${isEditing ? html`<input type="tel" id="mobilePhone" name="mobilePhone" value=${formData.mobilePhone} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.mobilePhone} />`}
                     </div>
                 </div>
 
@@ -1441,6 +1467,10 @@ const CustomerForm = ({ saveCustomer, setView, editingCustomerId, setEditingCust
                 <div class="form-group">
                     <label for="industry">Branche des Kunden</label>
                      ${isEditing ? html`<input type="text" id="industry" name="industry" value=${formData.industry} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.industry} />`}
+                </div>
+                <div class="form-group">
+                    <label for="erpSystem">Anbieter Warenwirtschaft</label>
+                     ${isEditing ? html`<input type="text" id="erpSystem" name="erpSystem" value=${formData.erpSystem} onInput=${handleChange} />` : html`<${DisplayField} value=${formData.erpSystem} />`}
                 </div>
                  <div class="form-group">
                     <label for="info">Infos</label>
@@ -1663,18 +1693,23 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
                     lines.forEach(line => {
                         if (!line.trim()) return;
                         const fields = line.split(',').map(field => field.trim().replace(/"/g, ''));
-                        const [companyName, contactPerson, address, email, phone, source, industry, nextSteps, firstContact, lastContact, sjSeen, info, reminderDate, inactive] = fields;
+                        // CSV Format includes website and mobilePhone at the end now
+                        const [companyName, contactPerson, address, email, phone, source, industry, nextSteps, firstContact, lastContact, sjSeen, info, reminderDate, inactive, salutation, erpSystem, website, mobilePhone] = fields;
                         
                         if (companyName) {
                             newCustomers.push({
                                 id: crypto.randomUUID(),
                                 companyName,
                                 contactPerson: contactPerson || '',
+                                salutation: salutation || '',
                                 address: address || '',
                                 email: email || '',
+                                website: website || '',
                                 phone: phone || '',
+                                mobilePhone: mobilePhone || '',
                                 source: source || 'Sonstiges',
                                 industry: industry || '',
+                                erpSystem: erpSystem || '',
                                 nextSteps: nextSteps || '',
                                 firstContact: safeFormatDateForStorage(firstContact),
                                 lastContact: safeFormatDateForStorage(lastContact),
@@ -1700,12 +1735,16 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
                             newCustomers.push({
                                 id: crypto.randomUUID(),
                                 companyName: String(companyName),
+                                salutation: String(row.salutation || row.Salutation || ''),
                                 contactPerson: String(row.contactPerson || row.ContactPerson || ''),
                                 address: String(row.address || row.Address || ''),
                                 email: String(row.email || row.Email || ''),
+                                website: String(row.website || row.Website || ''),
                                 phone: String(row.phone || row.Phone || ''),
+                                mobilePhone: String(row.mobilePhone || row.MobilePhone || ''),
                                 source: String(row.source || row.Source || 'Sonstiges'),
                                 industry: String(row.industry || row.Industry || ''),
+                                erpSystem: String(row.erpSystem || row.ErpSystem || ''),
                                 nextSteps: String(row.nextSteps || row.NextSteps || ''),
                                 firstContact: safeFormatDateForStorage(row.firstContact || row.FirstContact),
                                 lastContact: safeFormatDateForStorage(row.lastContact || row.LastContact),
@@ -1797,12 +1836,16 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
             const dataForExport = customers.map(customer => {
                  return {
                     companyName: customer.companyName,
+                    salutation: customer.salutation,
                     contactPerson: customer.contactPerson,
                     address: customer.address,
                     email: customer.email,
+                    website: customer.website,
                     phone: customer.phone,
+                    mobilePhone: customer.mobilePhone,
                     source: customer.source,
                     industry: customer.industry,
+                    erpSystem: customer.erpSystem,
                     nextSteps: customer.nextSteps,
                     firstContact: customer.firstContact,
                     lastContact: customer.lastContact,
@@ -1815,8 +1858,8 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
 
             const worksheet = XLSX.utils.json_to_sheet(dataForExport);
             worksheet['!cols'] = [
-                {wch: 25}, {wch: 20}, {wch: 30}, {wch: 25}, {wch: 15}, 
-                {wch: 15}, {wch: 20}, {wch: 30}, {wch: 12}, {wch: 12},
+                {wch: 25}, {wch: 10}, {wch: 20}, {wch: 30}, {wch: 25}, {wch: 25}, {wch: 15}, 
+                {wch: 15}, {wch: 15}, {wch: 20}, {wch: 20}, {wch: 30}, {wch: 12}, {wch: 12},
                 {wch: 8}, {wch: 40}, {wch: 12}, {wch: 8}
             ];
             
@@ -1837,7 +1880,8 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
             const headers = [
                 'companyName', 'contactPerson', 'address', 'email', 'phone', 
                 'source', 'industry', 'nextSteps', 'firstContact', 'lastContact', 
-                'sjSeen', 'info', 'reminderDate', 'inactive'
+                'sjSeen', 'info', 'reminderDate', 'inactive', 'salutation', 'erpSystem',
+                'website', 'mobilePhone'
             ];
 
             const escapeCsvField = (field) => {
@@ -1864,6 +1908,10 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
                     customer.info,
                     customer.reminderDate,
                     customer.inactive ? 'ja' : 'nein',
+                    customer.salutation,
+                    customer.erpSystem,
+                    customer.website,
+                    customer.mobilePhone
                 ];
                 return row.map(escapeCsvField).join(',');
             });
@@ -1953,7 +2001,7 @@ const Settings = ({ settings, setSettings, setView, customers, setCustomers, isD
         <div class="import-section">
             <h3>Kunden importieren & exportieren (Excel/CSV)</h3>
             <p>Importieren Sie eine CSV-, XLS- oder XLSX-Datei mit Ihren bestehenden Kundendaten. Die Spaltenüberschriften müssen sein:</p>
-            <p><code>companyName, contactPerson, address, email, phone, source, industry, nextSteps, firstContact, lastContact, sjSeen, info, reminderDate, inactive</code></p>
+            <p><code>companyName, contactPerson, address, email, phone, source, industry, nextSteps, firstContact, lastContact, sjSeen, info, reminderDate, inactive, salutation, erpSystem, website, mobilePhone</code></p>
             <p><small>Hinweis: 'sjSeen' und 'inactive' sollten 'ja' oder 'nein' sein. Datumsfelder (firstContact, lastContact, reminderDate) sollten im Format YYYY-MM-DD sein oder als gültiges Excel-Datum. Leere Datumsfelder sind erlaubt.</small></p>
             <div class="import-export-actions">
                 <div class="form-group">
