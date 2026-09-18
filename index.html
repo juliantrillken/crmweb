@@ -46,7 +46,7 @@ function relevantTodos(){let lim=dueLimit();return S.todos.filter(t=>!t.done&&t.
 function setContactMode(m){contactMode=m;selected=null;renderContacts()}
 function siteUrl(v){if(!v)return'';return /^https?:\/\//i.test(v)?v:'https://'+v}
 function lastContact(c){let a=S.activities.filter(x=>x.customerId===c.id&&['phone','email_sent','email_received','teams','onsite'].includes(x.type)).sort((a,b)=>String(b.at).localeCompare(String(a.at)))[0];return a||null}
-function nextTodo(c){return S.todos.filter(t=>t.customerId===c.id&&!t.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'))[0]||null}
+function nextTodo(c){return relevantTodos().filter(t=>t.customerId===c.id).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'))[0]||null}
 function syncLegacy(){S.customers.forEach(c=>{if(c.notes&&!S.activities.some(a=>a._migrated===c.id)){c.notes.forEach(n=>S.activities.push({id:n.id||uid(),customerId:c.id,type:classify(n.content),at:n.date||new Date().toISOString(),text:n.content||'',_migrated:c.id}));if(c.reminderDate&&c.nextSteps&&!S.todos.some(t=>t._legacy===c.id))S.todos.push({id:uid(),customerId:c.id,title:c.nextSteps,due:c.reminderDate,done:false,_legacy:c.id})}})}
 function classify(s=''){s=s.toLowerCase();if(s.includes('telefon'))return'phone';if(s.includes('teams'))return'teams';if(s.includes('vor ort')||s.includes('besichtigung'))return'onsite';if(s.includes('hallo ')||s.includes('guten tag')||s.includes('sehr geehrt'))return'email_sent';return'note'}
 function nav(r,id=null){route=r;selected=id;render()}
