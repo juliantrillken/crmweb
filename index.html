@@ -1,44 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale-1.0">
-  <title>CRM Pro</title>
-  <link rel="stylesheet" href="index.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#007bff">
-<link rel="stylesheet" href="/index.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b7660"><title>STOROJET CRM</title>
+<style>
+:root{--g:#0b7660;--g2:#eaf6f2;--bg:#f4f7f6;--txt:#17221f;--mut:#6c7773;--red:#c83a3a;--amber:#c98212;--line:#dde5e2}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Arial;color:var(--txt);background:var(--bg)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+aside{background:#102a25;color:#fff;padding:22px 16px;display:flex;flex-direction:column;gap:22px}.brand{font-weight:800;font-size:22px}.brand small{display:block;font-size:11px;letter-spacing:2px;color:#9fc6ba}
+nav{display:grid;gap:7px}.nav{border:0;background:transparent;color:#dcebe7;padding:11px 12px;border-radius:10px;text-align:left}.nav:hover,.nav.on{background:#1a4038;color:#fff}
+main{min-width:0}.top{height:74px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 26px;position:sticky;top:0;z-index:4}
+.search{flex:1;max-width:760px}.search input{width:100%;padding:12px 15px;border:1px solid var(--line);border-radius:12px;background:#fafcfc}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 13px}.btn.primary{background:var(--g);color:#fff;border-color:var(--g)}.btn.danger{color:var(--red)}
+.view{padding:26px;max-width:1500px;margin:auto}.head{display:flex;justify-content:space-between;gap:15px;align-items:flex-end;margin-bottom:20px}.head h1{margin:0;font-size:28px}.head p{margin:4px 0 0;color:var(--mut)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.tile,.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 3px 12px #102a2509}.tile{padding:18px}.tile b{display:block;font-size:28px}.tile span{color:var(--mut)}.tile.red{border-left:5px solid var(--red)}.tile.amber{border-left:5px solid var(--amber)}.tile.green{border-left:5px solid var(--g)}
+.grid{display:grid;grid-template-columns:1.4fr .8fr;gap:18px}.card h2{margin:0;padding:16px 18px;border-bottom:1px solid var(--line);font-size:16px}.body{padding:10px 18px}.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid #edf1ef}.row:last-child{border:0}.ico{width:34px;height:34px;border-radius:10px;background:var(--g2);display:grid;place-items:center}.title{font-weight:700}.sub{color:var(--mut);font-size:12px}.due{font-size:12px;padding:4px 8px;border-radius:999px;background:#eef3f1}.due.red{background:#fdeaea;color:#a52525}.due.today{background:#fff2db;color:#915b00}
+.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.toolbar input,.toolbar select,.form input,.form select,.form textarea{padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#fff}.toolbar input{min-width:300px;flex:1}
+.table{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:auto}table{border-collapse:collapse;width:100%}th,td{padding:12px 14px;text-align:left;border-bottom:1px solid #edf1ef}th{font-size:12px;color:var(--mut);background:#fafcfc}.click{cursor:pointer}.click:hover{background:#f8fbfa}
+.customerHero{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}.customerHero h1{margin:0 0 4px}.meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--mut)}
+.timeline .event{position:relative;padding:0 0 18px 46px}.timeline .event:before{content:"";position:absolute;left:16px;top:32px;bottom:-4px;width:1px;background:var(--line)}.timeline .event:last-child:before{display:none}.event .ico{position:absolute;left:0;top:0}
+.form{display:grid;gap:11px}.form label{display:grid;gap:5px;font-size:12px;color:var(--mut)}.form textarea{min-height:110px;resize:vertical}.cols{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+dialog{border:0;border-radius:16px;padding:0;max-width:660px;width:calc(100% - 28px);box-shadow:0 30px 90px #0004}dialog::backdrop{background:#0006}.dlgHead,.dlgFoot{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.dlgFoot{border-top:1px solid var(--line);border-bottom:0;justify-content:flex-end;gap:8px}.dlgBody{padding:18px}
+.notice{background:#eaf6f2;border:1px solid #badfd4;border-radius:14px;padding:16px;margin-bottom:18px}.empty{padding:28px;text-align:center;color:var(--mut)}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--g2);color:var(--g);font-size:12px}
+@media(max-width:900px){.app{grid-template-columns:1fr}aside{position:static;display:block;padding:12px}.brand{margin-bottom:10px}nav{display:flex;overflow:auto}.nav{white-space:nowrap}.top{padding:0 12px}.view{padding:16px}.tiles{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.cols{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-  <div id="app"></div>
-
-  <script type="importmap">
-{
-  "imports": {
-    "preact": "https://esm.sh/preact@10.22.0",
-    "preact/hooks": "https://esm.sh/preact@10.22.0/hooks",
-    "htm/preact": "https://esm.sh/htm@3.1.1/preact",
-    "preact/": "https://aistudiocdn.com/preact@^10.27.2/",
-    "htm/": "https://aistudiocdn.com/htm@^3.1.1/",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs"
-  }
-}
+<div class="app"><aside><div class="brand">STOROJET<small>CRM</small></div><nav>
+<button class="nav on" data-r="dashboard">⌂ Dashboard</button><button class="nav" data-r="contacts">🏢 Kontakte</button><button class="nav" data-r="todos">☑ Doings</button><button class="nav" data-r="history">◷ Historie</button><button class="nav" data-r="settings">⚙ Einstellungen</button>
+</nav></aside><main><div class="top"><div class="search"><input id="q" placeholder="Firma, Ansprechpartner, E-Mail, Telefon oder Inhalt suchen …"></div><button class="btn primary" id="quick">＋ Neuer Eintrag</button></div><div class="view" id="view"></div></main></div>
+<dialog id="dlg"><div class="dlgHead"><b id="dlgTitle"></b><button class="btn" onclick="dlg.close()">✕</button></div><div class="dlgBody" id="dlgBody"></div><div class="dlgFoot" id="dlgFoot"></div></dialog>
+<script>
+const DB='storojet_crm_v3', STORE='state', icons={phone:'📞',email_sent:'✉️',email_received:'📥',teams:'💻',onsite:'🤝',note:'📝',document:'📄',todo_done:'☑️',unknown:'◷'}, labels={phone:'Telefonat',email_sent:'E-Mail gesendet',email_received:'E-Mail erhalten',teams:'Teams-Meeting',onsite:'Vor-Ort-Termin',note:'Notiz',document:'Dokument',todo_done:'Doing erledigt',unknown:'Kontakt'};
+let S={customers:[],todos:[],activities:[],settings:{sources:['Google','Website','LogiMAT','Empfehlung','Partner','Bestandskunde','LinkedIn','Telefonakquise','JTL Connect','medilox','Sonstiges'],stale:90},backups:[]}, route='dashboard', selected=null;
+const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])), uid=()=>crypto.randomUUID(), today=()=>new Date().toISOString().slice(0,10), dmy=v=>v?new Date(v.length===10?v+'T12:00:00':v).toLocaleDateString('de-DE'):'–', dt=v=>v?new Date(v).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}):'–';
+function db(){return new Promise((ok,no)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+async function load(){let d=await db();S=await new Promise((ok,no)=>{let t=d.transaction(STORE),r=t.objectStore(STORE).get('crm');r.onsuccess=()=>ok(r.result||S);r.onerror=()=>no(r.error)});normalize()}
+async function save(){let d=await db();await new Promise((ok,no)=>{let t=d.transaction(STORE,'readwrite');t.objectStore(STORE).put(S,'crm');t.oncomplete=ok;t.onerror=()=>no(t.error)})}
+function normalize(){S.customers??=[];S.todos??=[];S.activities??=[];S.backups??=[];S.settings??={};S.settings.sources??=['Google','Website','LogiMAT','Empfehlung','Sonstiges'];S.settings.stale??=90}
+function activeCustomers(){return S.customers.filter(c=>!c.inactive)}
+function lastContact(c){let a=S.activities.filter(x=>x.customerId===c.id&&['phone','email_sent','email_received','teams','onsite'].includes(x.type)).sort((a,b)=>String(b.at).localeCompare(String(a.at)))[0];return a||null}
+function nextTodo(c){return S.todos.filter(t=>t.customerId===c.id&&!t.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'))[0]||null}
+function syncLegacy(){S.customers.forEach(c=>{if(c.notes&&!S.activities.some(a=>a._migrated===c.id)){c.notes.forEach(n=>S.activities.push({id:n.id||uid(),customerId:c.id,type:classify(n.content),at:n.date||new Date().toISOString(),text:n.content||'',_migrated:c.id}));if(c.reminderDate&&c.nextSteps&&!S.todos.some(t=>t._legacy===c.id))S.todos.push({id:uid(),customerId:c.id,title:c.nextSteps,due:c.reminderDate,done:false,_legacy:c.id})}})}
+function classify(s=''){s=s.toLowerCase();if(s.includes('telefon'))return'phone';if(s.includes('teams'))return'teams';if(s.includes('vor ort')||s.includes('besichtigung'))return'onsite';if(s.includes('hallo ')||s.includes('guten tag')||s.includes('sehr geehrt'))return'email_sent';return'note'}
+function nav(r,id=null){route=r;selected=id;render()}
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>nav(b.dataset.r));$('#quick').onclick=()=>activityModal();
+$('#q').oninput=e=>{let q=e.target.value.trim().toLowerCase();if(!q)return;route='contacts';selected=null;renderContacts(q)}
+function render(){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('on',b.dataset.r===route));if(route==='dashboard')dashboard();if(route==='contacts')selected?customer(selected):renderContacts();if(route==='todos')todos();if(route==='history')history();if(route==='settings')settings()}
+function dashboard(){let ac=activeCustomers(),open=S.todos.filter(t=>!t.done),td=today(),week=new Date();week.setDate(week.getDate()+7);let w=week.toISOString().slice(0,10), recent=[...S.activities].sort((a,b)=>String(b.at).localeCompare(String(a.at))).slice(0,8), stale=ac.map(c=>({c,a:lastContact(c)})).filter(x=>x.a&&((Date.now()-new Date(x.a.at))/864e5)>=S.settings.stale).sort((a,b)=>String(a.a.at).localeCompare(String(b.a.at))).slice(0,8);
+$('#view').innerHTML=`<div class="head"><div><h1>Dashboard</h1><p>Kontakte, Historie und Nachverfolgung auf einen Blick.</p></div><span class="pill">${ac.length} aktive Kontakte</span></div>
+${!S.customers.length?'<div class="notice"><b>Noch keine Daten vorhanden.</b><br>Importiere dein vorhandenes JSON-Backup unter Einstellungen. Die Daten bleiben ausschließlich in diesem Browser.</div>':''}
+<div class="tiles"><div class="tile red"><b>${open.filter(t=>t.due&&t.due<td).length}</b><span>Überfällig</span></div><div class="tile amber"><b>${open.filter(t=>t.due===td).length}</b><span>Heute</span></div><div class="tile"><b>${open.filter(t=>t.due>td&&t.due<=w).length}</b><span>Nächste 7 Tage</span></div><div class="tile green"><b>${S.todos.filter(t=>t.done&&t.doneAt?.slice(0,10)===td).length}</b><span>Heute erledigt</span></div></div>
+<div class="grid"><div class="card"><h2>☑ Offene Doings</h2><div class="body">${open.sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,12).map(todoRow).join('')||'<div class="empty">Keine offenen Doings.</div>'}</div></div>
+<div><div class="card" style="margin-bottom:18px"><h2>⚠ Kontakt prüfen</h2><div class="body">${stale.map(x=>`<div class="row click" onclick="nav('contacts','${x.c.id}')"><div class="ico">${icons[x.a.type]}</div><div><div class="title">${esc(x.c.companyName)}</div><div class="sub">Letzter Kontakt ${dmy(x.a.at)}</div></div></div>`).join('')||'<div class="empty">Keine auffälligen Kontakte.</div>'}</div></div>
+<div class="card"><h2>◷ Zuletzt bearbeitet</h2><div class="body">${recent.map(activityRow).join('')||'<div class="empty">Noch keine Historie.</div>'}</div></div></div></div>`}
+function todoRow(t){let c=S.customers.find(x=>x.id===t.customerId);let cls=t.due<today()?'red':t.due===today()?'today':'';return`<div class="row"><button class="btn" onclick="doneTodo('${t.id}')">✓</button><div><div class="title click" onclick="nav('contacts','${t.customerId}')">${esc(c?.companyName||'')}</div><div>${esc(t.title)}</div></div><span class="due ${cls}">${dmy(t.due)}</span></div>`}
+function activityRow(a){let c=S.customers.find(x=>x.id===a.customerId);return`<div class="row click" onclick="nav('contacts','${a.customerId}')"><div class="ico">${icons[a.type]||'📝'}</div><div><div class="title">${esc(c?.companyName||'')}</div><div>${esc(a.text||labels[a.type])}</div><div class="sub">${dt(a.at)}</div></div></div>`}
+function renderContacts(q=''){let rows=activeCustomers(),s=q||$('#q').value.trim().toLowerCase();if(s)rows=rows.filter(c=>JSON.stringify(c).toLowerCase().includes(s)||S.activities.some(a=>a.customerId===c.id&&a.text?.toLowerCase().includes(s)));$('#view').innerHTML=`<div class="head"><div><h1>Kontakte</h1><p>Schneller Zugriff auf Unternehmen und Ansprechpartner.</p></div><button class="btn primary" onclick="customerModal()">＋ Unternehmen</button></div><div class="toolbar"><input id="cq" value="${esc(s)}" placeholder="Kontakte durchsuchen …" oninput="renderContacts(this.value.toLowerCase())"></div><div class="table"><table><thead><tr><th>Unternehmen</th><th>Ansprechpartner</th><th>Letzter Kontakt</th><th>Nächstes Doing</th><th>Quelle</th></tr></thead><tbody>${rows.map(c=>{let l=lastContact(c),n=nextTodo(c);return`<tr class="click" onclick="nav('contacts','${c.id}')"><td><b>${esc(c.companyName)}</b><div class="sub">${esc(c.industry||'')}</div></td><td>${esc(c.contactPerson||'')}<div class="sub">${esc(c.email||'')}</div></td><td>${l?icons[l.type]+' '+dmy(l.at):dmy(c.lastContact)}</td><td>${n?esc(n.title)+' · '+dmy(n.due):'–'}</td><td>${esc(c.source||'')}</td></tr>`}).join('')}</tbody></table></div>`}
+function customer(id){let c=S.customers.find(x=>x.id===id);if(!c)return nav('contacts');let acts=S.activities.filter(a=>a.customerId===id).sort((a,b)=>String(b.at).localeCompare(String(a.at))),todos=S.todos.filter(t=>t.customerId===id&&!t.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')),l=lastContact(c);
+$('#view').innerHTML=`<div class="customerHero"><div class="head"><div><h1>${esc(c.companyName)}</h1><div class="meta"><span>👤 ${esc(c.contactPerson||'–')}</span><span>✉️ ${esc(c.email||'–')}</span><span>📞 ${esc(c.phone||c.mobilePhone||'–')}</span><span>🏷 ${esc(c.source||'–')}</span></div></div><div><button class="btn" onclick="customerModal('${c.id}')">Bearbeiten</button> <button class="btn primary" onclick="activityModal('${c.id}')">＋ Aktivität</button></div></div></div>
+<div class="tiles"><div class="tile"><b style="font-size:18px">${l?dmy(l.at):dmy(c.lastContact)}</b><span>${l?labels[l.type]:'Letzter Kontakt'}</span></div><div class="tile"><b style="font-size:18px">${todos[0]?dmy(todos[0].due):'–'}</b><span>Nächstes Doing</span></div><div class="tile"><b>${1+(c.additionalContacts?.length||0)}</b><span>Ansprechpartner</span></div><div class="tile green"><b style="font-size:18px">${c.sjSeen?'Ja':'Nein'}</b><span>STOROJET gesehen</span></div></div>
+<div class="grid"><div class="card"><h2>Historie</h2><div class="body timeline">${acts.map(a=>`<div class="event"><div class="ico">${icons[a.type]||'📝'}</div><b>${labels[a.type]||'Aktivität'} · ${dt(a.at)}</b><div style="white-space:pre-wrap;margin-top:4px">${esc(a.text||'')}</div></div>`).join('')||'<div class="empty">Noch keine Historie.</div>'}</div></div><div class="card"><h2>Offene Doings</h2><div class="body">${todos.map(todoRow).join('')||'<div class="empty">Keine offenen Doings.</div>'}<button class="btn primary" onclick="todoModal('${c.id}')">＋ Doing</button></div></div></div>`}
+function todos(){let rows=S.todos.filter(t=>!t.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));$('#view').innerHTML=`<div class="head"><div><h1>Doings</h1><p>Offene Aufgaben und Wiedervorlagen.</p></div><button class="btn primary" onclick="todoModal()">＋ Doing</button></div><div class="card"><div class="body">${rows.map(todoRow).join('')||'<div class="empty">Keine offenen Doings.</div>'}</div></div>`}
+function history(){let rows=[...S.activities].sort((a,b)=>String(b.at).localeCompare(String(a.at)));$('#view').innerHTML=`<div class="head"><div><h1>Historie</h1><p>Telefonate, E-Mails, Teams-Meetings, Vor-Ort-Termine und Notizen.</p></div></div><div class="card"><div class="body">${rows.map(activityRow).join('')||'<div class="empty">Noch keine Aktivitäten.</div>'}</div></div>`}
+function settings(){$('#view').innerHTML=`<div class="head"><div><h1>Einstellungen & Datensicherung</h1><p>Import, Export und lokale Browserdaten.</p></div></div><div class="grid"><div class="card"><h2>Datenaustausch</h2><div class="body"><p>Deine Kundendaten werden nicht im GitHub-Repository gespeichert.</p><p><input type="file" id="imp" accept=".json"></p><button class="btn primary" onclick="importJson()">JSON importieren</button> <button class="btn" onclick="exportJson()">JSON exportieren</button></div></div><div class="card"><h2>Lokale Sicherung</h2><div class="body"><p>Kontakte: <b>${S.customers.length}</b><br>Historie: <b>${S.activities.length}</b><br>Doings: <b>${S.todos.length}</b></p><button class="btn" onclick="makeBackup()">Sicherungsstand erstellen</button> <button class="btn danger" onclick="clearAll()">Browserdaten löschen</button></div></div></div>`}
+function openDlg(title,body,foot){$('#dlgTitle').textContent=title;$('#dlgBody').innerHTML=body;$('#dlgFoot').innerHTML=foot;dlg.showModal()}
+function customerModal(id){let c=S.customers.find(x=>x.id===id)||{};openDlg(id?'Unternehmen bearbeiten':'Unternehmen anlegen',`<div class="form"><div class="cols"><label>Firmenname<input id="fCompany" value="${esc(c.companyName||'')}"></label><label>Ansprechpartner<input id="fContact" value="${esc(c.contactPerson||'')}"></label></div><div class="cols"><label>E-Mail<input id="fEmail" value="${esc(c.email||'')}"></label><label>Telefon<input id="fPhone" value="${esc(c.phone||'')}"></label></div><div class="cols"><label>Branche<input id="fIndustry" value="${esc(c.industry||'')}"></label><label>Quelle<select id="fSource">${S.settings.sources.map(x=>`<option ${x===c.source?'selected':''}>${esc(x)}</option>`).join('')}</select></label></div><label>Adresse<textarea id="fAddress">${esc(c.address||'')}</textarea></label></div>`,`<button class="btn" onclick="dlg.close()">Abbrechen</button><button class="btn primary" onclick="saveCustomer('${id||''}')">Speichern</button>`)}
+async function saveCustomer(id){let c=id?S.customers.find(x=>x.id===id):{id:uid(),firstContact:today(),additionalContacts:[]};Object.assign(c,{companyName:$('#fCompany').value.trim(),contactPerson:$('#fContact').value.trim(),email:$('#fEmail').value.trim(),phone:$('#fPhone').value.trim(),industry:$('#fIndustry').value.trim(),source:$('#fSource').value,address:$('#fAddress').value.trim()});if(!id)S.customers.push(c);await save();dlg.close();nav('contacts',c.id)}
+function activityModal(cid){let opts=S.customers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${esc(c.companyName)}</option>`).join('');openDlg('Aktivität erfassen',`<div class="form"><label>Unternehmen<select id="aCust">${opts}</select></label><div class="cols"><label>Art<select id="aType"><option value="phone">📞 Telefonat</option><option value="email_sent">✉️ E-Mail gesendet</option><option value="email_received">📥 E-Mail erhalten</option><option value="teams">💻 Teams-Meeting</option><option value="onsite">🤝 Vor-Ort-Termin</option><option value="note">📝 Notiz</option></select></label><label>Datum<input id="aDate" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><label>Notiz<textarea id="aText"></textarea></label><label><input id="aTodo" type="checkbox"> Wiedervorlage direkt anlegen</label><div class="cols"><label>Doing<input id="aTodoTitle" placeholder="z.B. Nachfassen"></label><label>Fällig<input id="aDue" type="date"></label></div></div>`,`<button class="btn" onclick="dlg.close()">Abbrechen</button><button class="btn primary" onclick="saveActivity()">Speichern</button>`)}
+async function saveActivity(){let cid=$('#aCust').value,a={id:uid(),customerId:cid,type:$('#aType').value,at:new Date($('#aDate').value).toISOString(),text:$('#aText').value.trim()};S.activities.push(a);if($('#aTodo').checked&&$('#aTodoTitle').value.trim())S.todos.push({id:uid(),customerId:cid,title:$('#aTodoTitle').value.trim(),due:$('#aDue').value,done:false});await save();dlg.close();nav('contacts',cid)}
+function todoModal(cid){let opts=S.customers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${esc(c.companyName)}</option>`).join('');openDlg('Doing anlegen',`<div class="form"><label>Unternehmen<select id="tCust">${opts}</select></label><label>Aufgabe<input id="tTitle"></label><label>Fällig<input id="tDue" type="date"></label></div>`,`<button class="btn" onclick="dlg.close()">Abbrechen</button><button class="btn primary" onclick="saveTodo()">Speichern</button>`)}
+async function saveTodo(){S.todos.push({id:uid(),customerId:$('#tCust').value,title:$('#tTitle').value.trim(),due:$('#tDue').value,done:false});await save();dlg.close();render()}
+async function doneTodo(id){let t=S.todos.find(x=>x.id===id);if(!t)return;t.done=true;t.doneAt=new Date().toISOString();S.activities.push({id:uid(),customerId:t.customerId,type:'todo_done',at:t.doneAt,text:'Aufgabe erledigt: '+t.title});await save();render()}
+async function importJson(){let f=$('#imp').files[0];if(!f)return alert('Bitte JSON-Datei auswählen.');let x=JSON.parse(await f.text());S.customers=x.customers||[];S.todos=x.todos||[];S.activities=x.activities||[];S.settings={...S.settings,...(x.settings||{})};syncLegacy();await save();alert('Import abgeschlossen: '+S.customers.length+' Kontakte.');render()}
+function exportJson(){let blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='STOROJET_CRM_Backup_'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+async function makeBackup(){S.backups.push({at:new Date().toISOString(),data:JSON.parse(JSON.stringify({customers:S.customers,todos:S.todos,activities:S.activities,settings:S.settings}))});S.backups=S.backups.slice(-10);await save();alert('Lokaler Sicherungsstand erstellt.')}
+async function clearAll(){if(!confirm('Wirklich alle lokalen CRM-Daten in diesem Browser löschen?'))return;S={customers:[],todos:[],activities:[],settings:{sources:['Google','Website','LogiMAT','Empfehlung','Sonstiges'],stale:90},backups:[]};await save();render()}
+load().then(async()=>{syncLegacy();await save();render()});
 </script>
-  <script type="module" src="index.tsx"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(registration => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        }, err => {
-          console.log('ServiceWorker registration failed: ', err);
-        });
-      });
-    }
-  </script>
-<script type="module" src="/index.tsx"></script>
-</body>
-</html>
+</body></html>
