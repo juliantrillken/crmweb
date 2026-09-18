@@ -1,20 +1,35 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# STOROJET CRM
 
-# Run and deploy your AI Studio app
+Browserbasierte CRM-Anwendung für Kontakte, Kontakthistorie und Wiedervorlagen.
 
-This contains everything you need to run your app locally.
+## Betrieb
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Fa51E_feeCQateRmNloaDNG7rSwRdtbf
+Die App ist als statische Web-Anwendung ausgelegt und benötigt keinen Server, kein Python und keinen API-Key.
 
-## Run Locally
+Die Kundendaten werden **nicht im Repository gespeichert**. Nach dem ersten Start werden vorhandene CRM-Daten per JSON importiert und ausschließlich im jeweiligen Browser in IndexedDB gespeichert.
 
-**Prerequisites:**  Node.js
+## Funktionen
 
+- Dashboard mit Kacheln für überfällige, heutige und kommende Doings
+- Kontakte und Ansprechpartner
+- Kontakthistorie mit Telefonat, E-Mail, Teams-Meeting, Vor-Ort-Termin und Notiz
+- Automatisch ermittelter letzter Kontakt
+- Doings und Wiedervorlagen
+- Volltextsuche über Kontakte und Historie
+- JSON-Import und JSON-Export
+- lokale Sicherungsstände im Browser
+- responsive Oberfläche
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## GitHub Pages
+
+Als Quelle für GitHub Pages den Branch `main` und den Ordner `/ (root)` verwenden.
+
+Nach der Veröffentlichung ist die App typischerweise unter
+
+`https://juliantrillken.github.io/crmweb/`
+
+erreichbar.
+
+## Datenschutz
+
+Keine Kundendaten oder CRM-Backups in dieses Repository committen.
