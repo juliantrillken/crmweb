@@ -4,7 +4,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#1b3b8f"><title>STOROJET CRM</title>
 <style>
-:root{--g:#1b3b8f;--g2:#eef2ff;--bg:#f5f6f8;--txt:#2b2d33;--mut:#6d7078;--red:#c83a3a;--amber:#c98212;--line:#dfe2e8}
+:root{--g:#1b3b8f;--g2:#eef2ff;--bg:#f5f6f8;--txt:#2b2d33;--mut:#6d7078;--red:#c83a3a;--amber:#c98212;--line:#dfe2e8;--surface:#fff;--surface2:#fafcfc;--rowline:#edf1ef}
+body.dark{--g:#7c9cff;--g2:#202c52;--bg:#11151c;--txt:#eef2f7;--mut:#9da7b5;--red:#ff7474;--amber:#f4b84d;--line:#343b49;--surface:#1a202a;--surface2:#202733;--rowline:#2c3441}
 *{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Arial;color:var(--txt);background:var(--bg)}
 button,input,select,textarea{font:inherit}button{cursor:pointer}.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
 aside{background:#242833;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:18px}.brand{background:#fff;border-radius:14px;padding:10px;text-align:center;min-height:72px;display:grid;place-items:center}.brand img{display:block;width:100%;max-width:160px;max-height:88px;object-fit:contain;margin:auto;border-radius:8px}.brandFallback{font-weight:800;font-size:20px;color:#1b3b8f}.brand small{display:block;margin-top:5px;font-size:10px;letter-spacing:2px;color:#6d7078}
@@ -22,14 +23,25 @@ main{min-width:0}.top{height:74px;background:#fff;border-bottom:1px solid var(--
 .form{display:grid;gap:11px}.form label{display:grid;gap:5px;font-size:12px;color:var(--mut)}.form textarea{min-height:110px;resize:vertical}.cols{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 dialog{border:0;border-radius:16px;padding:0;max-width:660px;width:calc(100% - 28px);box-shadow:0 30px 90px #0004}dialog::backdrop{background:#0006}.dlgHead,.dlgFoot{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.dlgFoot{border-top:1px solid var(--line);border-bottom:0;justify-content:flex-end;gap:8px}.dlgBody{padding:18px}
 .notice{background:#eef2ff;border:1px solid #cbd5f5;border-radius:14px;padding:16px;margin-bottom:18px}.toast{position:fixed;right:22px;bottom:22px;z-index:100;background:#242833;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 12px 34px #0004;max-width:420px}.empty{padding:28px;text-align:center;color:var(--mut)}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--g2);color:var(--g);font-size:12px}
+
+body.dark .top,body.dark .tile,body.dark .card,body.dark .table,body.dark .customerHero,body.dark .projectCard,body.dark dialog{background:var(--surface);color:var(--txt)}
+body.dark .search input,body.dark .toolbar input,body.dark .toolbar select,body.dark .form input,body.dark .form select,body.dark .form textarea,body.dark .btn,body.dark .tab,body.dark .suggestions{background:var(--surface2);color:var(--txt);border-color:var(--line)}
+body.dark th{background:var(--surface2);color:var(--mut)}
+body.dark td,body.dark .row,body.dark .suggestion{border-color:var(--rowline)}
+body.dark .click:hover,body.dark .suggestion:hover{background:#222b38}
+body.dark .notice{background:#1e2a4a;border-color:#334878}
+body.dark .brand{background:#f8fafc}
+body.dark .phaseStep.current{color:var(--txt)}
+body.dark .phaseDot{border-color:var(--surface)}
 @media(max-width:900px){.app{grid-template-columns:1fr}aside{position:static;display:block;padding:12px}.brand{margin-bottom:10px}nav{display:flex;overflow:auto}.nav{white-space:nowrap}.top{padding:0 12px}.view{padding:16px}.tiles{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.cols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="app"><aside><div class="brand" id="brand"><div class="brandFallback">STOROJET<small>CRM</small></div></div><nav>
 <button class="nav on" data-r="dashboard">⌂ Dashboard</button><button class="nav" data-r="contacts">🏢 Kontakte</button><button class="nav" data-r="todos">☑ Doings</button><button class="nav" data-r="projects">📁 Projekte</button><button class="nav" data-r="history">◷ Historie</button><button class="nav" data-r="settings">⚙ Einstellungen</button>
-</nav></aside><main><div class="top"><div class="search"><input id="q" placeholder="Firma, Ansprechpartner, E-Mail, Telefon oder Inhalt suchen …"></div><button class="btn primary" id="quick">＋ Neuer Eintrag</button></div><div class="view" id="view"></div></main></div>
+</nav></aside><main><div class="top"><div class="search"><input id="q" placeholder="Firma, Ansprechpartner, E-Mail, Telefon oder Inhalt suchen …"></div><button class="btn" id="themeToggle" onclick="toggleTheme()" title="Darkmode umschalten">🌙</button><button class="btn primary" id="quick">＋ Neuer Eintrag</button></div><div class="view" id="view"></div></main></div>
 <dialog id="dlg"><div class="dlgHead"><b id="dlgTitle"></b><button class="btn" onclick="dlg.close()">✕</button></div><div class="dlgBody" id="dlgBody"></div><div class="dlgFoot" id="dlgFoot"></div></dialog>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 const DB='storojet_crm_v3', STORE='state', projectPhases=['Vertrag zugesendet','Unterschrift vorhanden','Kick-Off','Warenanlieferung','Aufbau / Schnittstellenanbindung','Projektabnahme'], icons={phone:'📞',email_sent:'✉️',email_received:'📥',teams:'💻',onsite:'🤝',note:'📝',document:'📄',todo_done:'☑️',unknown:'◷'}, labels={phone:'Telefonat',email_sent:'E-Mail gesendet',email_received:'E-Mail erhalten',teams:'Teams-Meeting',onsite:'Vor-Ort-Termin',note:'Notiz',document:'Dokument',todo_done:'Doing erledigt',unknown:'Kontakt'};
 let S={customers:[],todos:[],activities:[],projects:[],settings:{sources:['Google','Website','LogiMAT','Empfehlung','Partner','Bestandskunde','LinkedIn','Telefonakquise','JTL Connect','medilox','Sonstiges'],stale:90},backups:[]}, route='dashboard', selected=null, contactMode='active', projectMode='active';
@@ -37,8 +49,10 @@ const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,m=
 function db(){return new Promise((ok,no)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 async function load(){let d=await db();S=await new Promise((ok,no)=>{let t=d.transaction(STORE),r=t.objectStore(STORE).get('crm');r.onsuccess=()=>ok(r.result||S);r.onerror=()=>no(r.error)});normalize()}
 async function save(){let d=await db();await new Promise((ok,no)=>{let t=d.transaction(STORE,'readwrite');t.objectStore(STORE).put(S,'crm');t.oncomplete=ok;t.onerror=()=>no(t.error)})}
-function normalize(){S.customers??=[];S.todos??=[];S.activities??=[];S.projects??=[];S.backups??=[];S.settings??={};S.settings.sources??=['Google','Website','LogiMAT','Empfehlung','Sonstiges'];S.settings.stale??=90;S.settings.logoDataUrl??=''}
+function normalize(){S.customers??=[];S.todos??=[];S.activities??=[];S.projects??=[];S.backups??=[];S.settings??={};S.settings.sources??=['Google','Website','LogiMAT','Empfehlung','Sonstiges'];S.settings.stale??=90;S.settings.logoDataUrl??='';S.settings.darkMode??=false;S.settings.salesInitials??='JT'}
 function applyBrand(){let b=$('#brand');if(!b)return;b.innerHTML=S.settings.logoDataUrl?'<img alt="Firmenlogo" src="'+S.settings.logoDataUrl+'"><small>CRM</small>':'<div class="brandFallback">STOROJET<small>CRM</small></div>'}
+function applyTheme(){document.body.classList.toggle('dark',!!S.settings.darkMode);let b=$('#themeToggle');if(b){b.textContent=S.settings.darkMode?'☀️':'🌙';b.title=S.settings.darkMode?'Lightmode aktivieren':'Darkmode aktivieren'}}
+async function toggleTheme(){S.settings.darkMode=!S.settings.darkMode;applyTheme();await save()}
 function activeCustomers(){return S.customers.filter(c=>!c.inactive)}
 function inactiveCustomers(){return S.customers.filter(c=>!!c.inactive)}
 function contactSortValue(c){let a=lastContact(c);return String(a?.at||c.lastContact||c.firstContact||'')}
@@ -57,7 +71,7 @@ function notify(msg){let el=document.createElement('div');el.className='toast';e
 function nav(r,id=null){route=r;selected=id;render()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>nav(b.dataset.r));$('#quick').onclick=()=>activityModal();
 $('#q').oninput=e=>{let q=e.target.value.trim().toLowerCase();if(!q)return;route='contacts';selected=null;renderContacts(q)}
-function render(){applyBrand();document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('on',b.dataset.r===route));if(route==='dashboard')dashboard();if(route==='contacts')selected?customer(selected):renderContacts();if(route==='todos')todos();if(route==='projects')projects();if(route==='history')history();if(route==='settings')settings()}
+function render(){applyBrand();applyTheme();document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('on',b.dataset.r===route));if(route==='dashboard')dashboard();if(route==='contacts')selected?customer(selected):renderContacts();if(route==='todos')todos();if(route==='projects')projects();if(route==='history')history();if(route==='settings')settings()}
 function dashboard(){let ac=activeCustomers(),open=relevantTodos(),td=today(),w=dueLimit();
 $('#view').innerHTML=`<div class="head"><div><h1>Dashboard</h1><p>Fällige Doings und Schnellnotizen auf einen Blick.</p></div><span class="pill">${ac.length} aktive Kontakte</span></div>
 ${!S.customers.length?'<div class="notice"><b>Noch keine Daten vorhanden.</b><br>Importiere dein vorhandenes JSON-Backup unter Einstellungen. Die Daten bleiben ausschließlich in diesem Browser.</div>':''}
