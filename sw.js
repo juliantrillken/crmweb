@@ -1,56 +1,19 @@
-const CACHE_NAME = 'crm-pro-cache-v1';
-const CORE_ASSETS = [
-  '/',
-  'index.html',
-  'index.css',
-];
+const CACHE_PREFIX = 'crm-pro-cache';
 
-// On install, pre-cache core assets
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(CORE_ASSETS))
-      .then(() => self.skipWaiting()) // Activate new service worker immediately
-  );
+  self.skipWaiting();
 });
 
-// On activate, clean up old caches
 self.addEventListener('activate', event => {
-  const currentCaches = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return cacheNames.filter(cacheName => !currentCaches.includes(cacheName));
-    }).then(cachesToDelete => {
-      return Promise.all(cachesToDelete.map(cacheToDelete => {
-        return caches.delete(cacheToDelete);
-      }));
-    }).then(() => self.clients.claim()) // Take control of all open clients
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k.startsWith(CACHE_PREFIX)).map(k => caches.delete(k)));
+    await self.registration.unregister();
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clients) client.navigate(client.url);
+  })());
 });
 
-// On fetch, serve from cache, falling back to network
-self.addEventListener('fetch', event => {
-  // We only handle GET requests
-  if (event.request.method !== 'GET') {
-      return;
-  }
-
-  event.respondWith(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.match(event.request).then(response => {
-        // Return response from cache if found
-        if (response) {
-          return response;
-        }
-
-        // Otherwise, fetch from network
-        return fetch(event.request).then(networkResponse => {
-          // Add the new response to the cache
-          cache.put(event.request, networkResponse.clone());
-          // And return it to the browser
-          return networkResponse;
-        });
-      });
-    })
-  );
+self.addEventListener('fetch', () => {
+  // Intentionally no caching. The current CRM runs as a network-first static app.
 });
