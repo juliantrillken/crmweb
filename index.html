@@ -34,12 +34,19 @@ body.dark .notice{background:#1e2a4a;border-color:#334878}
 body.dark .brand{background:#f8fafc}
 body.dark .phaseStep.current{color:var(--txt)}
 body.dark .phaseDot{border-color:var(--surface)}
+body.dark .nav{color:#f4f7fb}
+body.dark .statIcon,body.dark .ico,body.dark .taskCheck{color:#ffffff;background:#2a3650;border-color:#4b5a76}
+body.dark .statCard.danger .statIcon{background:#552c32;color:#ffb5b5}
+body.dark .statCard.warning .statIcon{background:#5a4726;color:#ffd88a}
+body.dark .btn:not(.primary){color:#f5f7fb}
+body.dark .pill{background:#293552;color:#b8c8ff}
+body.dark .due{background:#29313c;color:#e8edf5}
 @media(max-width:900px){.timeOverview{grid-template-columns:1fr}.dashboardGrid{grid-template-columns:1fr}.statGrid{grid-template-columns:1fr 1fr}.taskComposer{grid-template-columns:1fr}.app{grid-template-columns:1fr}aside{position:static;display:block;padding:12px}.brand{margin-bottom:10px}nav{display:flex;overflow:auto}.nav{white-space:nowrap}.top{padding:0 12px}.view{padding:16px}.tiles{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.cols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="app"><aside><div class="brand" id="brand"><div class="brandFallback">STOROJET<small>CRM</small></div></div><nav>
-<button class="nav on" data-r="dashboard">⌂ Dashboard</button><button class="nav" data-r="contacts">🏢 Kontakte</button><button class="nav" data-r="todos">☑ Doings</button><button class="nav" data-r="projects">📁 Projekte</button><button class="nav" data-r="time">⏱ Zeiten</button><button class="nav" data-r="history">◷ Historie</button><button class="nav" data-r="settings">⚙ Einstellungen</button>
+<button class="nav on" data-r="dashboard">⌂ Dashboard</button><button class="nav" data-r="contacts">🏢 Kontakte</button><button class="nav" data-r="todos">☑ Doings</button><button class="nav" data-r="projects">📁 Projekte</button><button class="nav" data-r="time" onclick="nav('time')">⏱ Zeiten</button><button class="nav" data-r="history">◷ Historie</button><button class="nav" data-r="settings">⚙ Einstellungen</button>
 </nav></aside><main><div class="top"><div class="search"><input id="q" placeholder="Firma, Ansprechpartner, E-Mail, Telefon oder Inhalt suchen …"></div><button class="btn primary" id="quick">＋ Neuer Eintrag</button></div><div class="view" id="view"></div></main></div>
 <dialog id="dlg"><div class="dlgHead"><b id="dlgTitle"></b><button class="btn" onclick="dlg.close()">✕</button></div><div class="dlgBody" id="dlgBody"></div><div class="dlgFoot" id="dlgFoot"></div></dialog>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
@@ -70,7 +77,7 @@ function inferLegacyProjectPhase(p){let cl=p?.checklist||{};if(['green','yellow'
 function syncLegacyProjects(){S.customers.forEach(c=>{(c.projects||[]).forEach(p=>{if(S.projects.some(x=>x.id===p.id||x.legacyId===p.id))return;S.projects.push({id:p.id||uid(),legacyId:p.id||'',customerId:c.id,title:p.title||('STOROJET '+c.companyName),phase:inferLegacyProjectPhase(p),status:'active',projectManager:p.projectManager||'',accountManager:p.accountManager||'',client:p.client||'',targetDate:'',notes:p.specials||'',legacy:p})})})}
 function notify(msg){let el=document.createElement('div');el.className='toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),4200)}
 function nav(r,id=null){route=r;selected=id;render()}
-document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>nav(b.dataset.r));$('#quick').onclick=()=>activityModal();
+document.querySelectorAll('.nav').forEach(b=>{if(!b.getAttribute('onclick'))b.onclick=()=>nav(b.dataset.r)});$('#quick').onclick=()=>activityModal();
 $('#q').oninput=e=>{let q=e.target.value.trim().toLowerCase();if(!q)return;route='contacts';selected=null;renderContacts(q)}
 function render(){applyBrand();applyTheme();document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('on',b.dataset.r===route));if(route==='dashboard')dashboard();if(route==='contacts')selected?customer(selected):renderContacts();if(route==='todos')todos();if(route==='projects')projects();if(route==='time')timeView();if(route==='history')history();if(route==='settings')settings()}
 
@@ -186,6 +193,7 @@ async function importJson(){let f=$('#imp').files[0];if(!f)return alert('Bitte J
 function exportJson(){let blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='STOROJET_CRM_Backup_'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 async function makeBackup(){S.backups.push({at:new Date().toISOString(),data:JSON.parse(JSON.stringify({customers:S.customers,todos:S.todos,activities:S.activities,projects:S.projects,tasks:S.tasks,timeEntries:S.timeEntries,timeReports:S.timeReports,settings:S.settings}))});S.backups=S.backups.slice(-10);await save();alert('Lokaler Sicherungsstand erstellt.')}
 async function clearAll(){if(!confirm('Wirklich alle lokalen CRM-Daten in diesem Browser löschen?'))return;S={customers:[],todos:[],activities:[],projects:[],tasks:[],timeEntries:[],timeReports:[],settings:{sources:['Google','Website','LogiMAT','Empfehlung','Sonstiges'],stale:90},backups:[]};await save();render()}
-load().then(async()=>{syncLegacy();syncLegacyProjects();await save();render()});
+async function cleanupLegacyAppCache(){try{if('serviceWorker' in navigator){let regs=await navigator.serviceWorker.getRegistrations();for(const reg of regs)await reg.unregister()}if('caches' in window){let keys=await caches.keys();for(const key of keys){if(key.startsWith('crm-pro-cache'))await caches.delete(key)}}}catch(e){console.warn('Cache-Bereinigung nicht möglich',e)}}
+load().then(async()=>{await cleanupLegacyAppCache();syncLegacy();syncLegacyProjects();await save();render()});
 </script>
 </body></html>
